@@ -263,6 +263,63 @@
         .bonus-badge.secured { background: var(--green-bg); color: var(--green); }
         .bonus-badge.at-risk { background: var(--red-bg); color: var(--red); }
 
+        /* ===== AVATAR PHOTO ===== */
+        .avatar { position: relative; overflow: hidden; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .avatar .level-ring {
+            position: absolute; inset: -3px; border-radius: 50%;
+            border: 3px solid var(--blue); pointer-events: none;
+        }
+        .avatar .level-ring.gold { border-color: var(--gold); }
+        .avatar .level-ring.green { border-color: var(--green); }
+        .avatar .level-ring.purple { border-color: var(--purple); }
+
+        /* ===== STREAKS & BADGES ===== */
+        .streak-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;
+            background: var(--yellow-bg); color: var(--yellow);
+        }
+        .xp-bar {
+            width: 100%; height: 6px; background: rgba(255,255,255,.06);
+            border-radius: 6px; overflow: hidden; margin: 6px 0;
+        }
+        .xp-fill { height: 100%; border-radius: 6px; background: var(--gradient-purple); transition: width 1s ease; }
+        .level-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 700;
+            background: var(--purple); color: #fff; margin-top: 4px;
+        }
+        .team-card .badges-row {
+            display: flex; flex-wrap: wrap; justify-content: center;
+            gap: 4px; margin-top: 8px;
+        }
+        .mini-badge {
+            width: 24px; height: 24px; border-radius: 6px; display: flex;
+            align-items: center; justify-content: center; font-size: 12px;
+            background: rgba(255,255,255,.06); cursor: default;
+        }
+        .mini-badge[title]:hover { transform: scale(1.2); }
+
+        /* ===== WEEKLY MVP ===== */
+        .mvp-banner {
+            background: linear-gradient(135deg, rgba(255,215,0,.08), rgba(255,171,0,.05));
+            border: 1px solid rgba(255,215,0,.2); border-radius: 14px;
+            padding: 16px 22px; margin-bottom: 18px;
+            display: flex; align-items: center; gap: 16px;
+        }
+        .mvp-banner .mvp-avatar {
+            width: 48px; height: 48px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; font-weight: 700; color: #fff; flex-shrink: 0;
+            overflow: hidden;
+        }
+        .mvp-banner .mvp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .mvp-banner .mvp-info { flex: 1; }
+        .mvp-banner .mvp-title { font-size: 14px; font-weight: 700; color: var(--gold); }
+        .mvp-banner .mvp-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .mvp-banner .mvp-trophy { font-size: 28px; }
+
         /* ===== FAME WALL ===== */
         .fame-header {
             display: flex; justify-content: space-between; align-items: center;
@@ -388,6 +445,26 @@
         .member-row .member-role { font-size: 12px; color: var(--text-muted); }
         .export-btns { display: flex; gap: 10px; margin-top: 10px; }
         .export-btns .btn { font-size: 13px; padding: 8px 16px; }
+
+        /* ===== PROFILE PHOTO UPLOAD ===== */
+        .photo-upload {
+            display: flex; align-items: center; gap: 16px; margin-bottom: 14px;
+        }
+        .photo-upload .photo-preview {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: rgba(255,255,255,.06); display: flex;
+            align-items: center; justify-content: center;
+            font-size: 28px; font-weight: 700; color: var(--text-muted);
+            overflow: hidden; flex-shrink: 0; border: 2px solid var(--border);
+        }
+        .photo-upload .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .photo-upload .photo-actions { display: flex; flex-direction: column; gap: 6px; }
+        .photo-upload .photo-btn {
+            background: var(--bg); border: 1px solid var(--border); color: var(--text-muted);
+            padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 12px;
+            transition: all .2s;
+        }
+        .photo-upload .photo-btn:hover { border-color: var(--blue); color: var(--blue); }
 
         /* ===== EMPTY STATE ===== */
         .empty-state {
@@ -1313,12 +1390,15 @@ function deleteFameClient(id) {
 function showSettings() {
     const members = state.settings.teamMembers;
     const membersHTML = members.map(m => `
-        <div class="member-row">
-            <div class="member-avatar" style="background:${m.color};">${m.avatar}</div>
+        <div class="member-row" style="cursor:pointer;" onclick="closeModal(); setTimeout(function(){ showEditMember('${m.id}'); }, 200);">
+            <div class="member-avatar" style="background:${m.color};overflow:hidden;">
+                ${m.photo ? `<img src="${m.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : m.avatar}
+            </div>
             <div class="member-info">
                 <div class="member-name">${m.name}</div>
-                <div class="member-role">${m.role}</div>
+                <div class="member-role">${m.role || 'Sin rol asignado'}</div>
             </div>
+            <span style="color:var(--text-muted);font-size:13px;">&#9998;</span>
         </div>
     `).join('');
     const { url, key } = getSupabaseConfig();
@@ -1467,6 +1547,204 @@ function resetData() {
     renderAll();
     closeModal();
     showToast('Datos restaurados');
+}
+
+// =====================================================================
+// ===== GAMIFICATION ENGINE =====
+// =====================================================================
+const XP_PER_LEVEL = 100;
+const LEVEL_TITLES = ['Novato', 'Aprendiz', 'Competente', 'Experto', 'Maestro', 'Leyenda'];
+const LEVEL_COLORS = ['var(--text-muted)', 'var(--blue)', 'var(--green)', 'var(--purple)', 'var(--gold)', 'var(--gold)'];
+
+function calculateXP(memberId) {
+    const qd = getQuarterData();
+    let xp = 0;
+    // +10 XP per scorecard hit
+    const memberMetrics = qd.scorecard.metrics.filter(m => m.ownerId === memberId);
+    memberMetrics.forEach(m => {
+        for (let w = 1; w <= 13; w++) {
+            const wd = qd.scorecard.weeks[w] && qd.scorecard.weeks[w][m.id];
+            if (wd && wd.good) xp += 10;
+        }
+    });
+    // +25 XP per completed milestone
+    qd.rocks.filter(r => r.ownerId === memberId).forEach(r => {
+        (r.milestones || []).forEach(ms => { if (ms.done) xp += 25; });
+    });
+    // +50 XP per rock at 100%
+    qd.rocks.filter(r => r.ownerId === memberId && r.progress === 100).forEach(() => { xp += 50; });
+    // +15 XP per on-track rock
+    qd.rocks.filter(r => r.ownerId === memberId && r.status === 'on-track').forEach(() => { xp += 15; });
+    return xp;
+}
+
+function getLevel(xp) {
+    const level = Math.min(LEVEL_TITLES.length - 1, Math.floor(xp / XP_PER_LEVEL));
+    const xpInLevel = xp % XP_PER_LEVEL;
+    return { level, title: LEVEL_TITLES[level], color: LEVEL_COLORS[level], xpInLevel, xpNeeded: XP_PER_LEVEL };
+}
+
+function calculateStreak(memberId) {
+    const qd = getQuarterData();
+    const memberMetrics = qd.scorecard.metrics.filter(m => m.ownerId === memberId);
+    if (memberMetrics.length === 0) return 0;
+    let streak = 0;
+    // Count consecutive weeks (from latest) where ALL member metrics hit
+    for (let w = 13; w >= 1; w--) {
+        const weekData = qd.scorecard.weeks[w];
+        if (!weekData) break;
+        const metricsThisWeek = memberMetrics.filter(m => weekData[m.id]);
+        if (metricsThisWeek.length === 0) break;
+        const allHit = metricsThisWeek.every(m => weekData[m.id] && weekData[m.id].good);
+        if (allHit) streak++;
+        else break;
+    }
+    return streak;
+}
+
+function calculateBadges(memberId) {
+    const qd = getQuarterData();
+    const badges = [];
+    const xp = calculateXP(memberId);
+    const streak = calculateStreak(memberId);
+    const memberRocks = qd.rocks.filter(r => r.ownerId === memberId);
+    const memberMetrics = qd.scorecard.metrics.filter(m => m.ownerId === memberId);
+
+    // Streak badges
+    if (streak >= 3) badges.push({ icon: '🔥', title: 'Racha x' + streak + ' semanas' });
+    if (streak >= 6) badges.push({ icon: '⚡', title: 'Imparable: 6+ semanas' });
+    // Rock badges
+    const completedRocks = memberRocks.filter(r => r.progress === 100).length;
+    if (completedRocks >= 1) badges.push({ icon: '🏔️', title: 'Rock Crusher: ' + completedRocks + ' completados' });
+    if (memberRocks.length > 0 && memberRocks.every(r => r.status === 'on-track'))
+        badges.push({ icon: '🎯', title: 'Todos los Rocks on-track' });
+    // XP badges
+    if (xp >= 200) badges.push({ icon: '⭐', title: 'Estrella: 200+ XP' });
+    if (xp >= 400) badges.push({ icon: '💎', title: 'Diamante: 400+ XP' });
+    // Scorecard badges
+    let totalHits = 0, totalEntries = 0;
+    memberMetrics.forEach(m => {
+        for (let w = 1; w <= 13; w++) {
+            const wd = qd.scorecard.weeks[w] && qd.scorecard.weeks[w][m.id];
+            if (wd) { totalEntries++; if (wd.good) totalHits++; }
+        }
+    });
+    if (totalEntries >= 10 && totalHits / totalEntries >= 0.9)
+        badges.push({ icon: '🏆', title: 'Elite: 90%+ hit rate' });
+    return badges;
+}
+
+function getWeeklyMVP() {
+    const qd = getQuarterData();
+    const currentWeek = getDisplayWeek();
+    const weekData = qd.scorecard.weeks[currentWeek];
+    if (!weekData) return null;
+    const members = state.settings.teamMembers;
+    let bestMember = null, bestHitRate = -1;
+    members.forEach(member => {
+        const memberMetrics = qd.scorecard.metrics.filter(m => m.ownerId === member.id);
+        const results = memberMetrics.map(m => weekData[m.id]).filter(Boolean);
+        if (results.length === 0) return;
+        const hits = results.filter(r => r.good).length;
+        const rate = hits / results.length;
+        if (rate > bestHitRate) { bestHitRate = rate; bestMember = { ...member, hitRate: rate, hits, total: results.length }; }
+    });
+    return bestMember && bestHitRate > 0 ? bestMember : null;
+}
+
+function getAvatarHTML(member, size) {
+    const sz = size || 68;
+    const xp = calculateXP(member.id);
+    const lvl = getLevel(xp);
+    const ringClass = lvl.level >= 4 ? 'gold' : lvl.level >= 3 ? 'purple' : lvl.level >= 2 ? 'green' : '';
+    const photoUrl = member.photo || '';
+    const inner = photoUrl
+        ? `<img src="${photoUrl}" alt="${member.name}">`
+        : member.avatar || member.name[0];
+    return `<div class="avatar" style="width:${sz}px;height:${sz}px;background:${member.color};font-size:${Math.round(sz*0.38)}px;">
+        ${inner}
+        ${ringClass ? `<div class="level-ring ${ringClass}"></div>` : ''}
+    </div>`;
+}
+
+// =====================================================================
+// ===== PROFILE EDITING =====
+// =====================================================================
+function showEditMember(memberId) {
+    const member = getMember(memberId);
+    if (!member) return;
+    const photoPreview = member.photo
+        ? `<img src="${member.photo}" alt="${member.name}">`
+        : `<span style="color:${member.color};font-size:28px;font-weight:700;">${member.avatar}</span>`;
+    const html = `
+        <div class="photo-upload">
+            <div class="photo-preview" id="profile-photo-preview" style="border-color:${member.color};">
+                ${photoPreview}
+            </div>
+            <div class="photo-actions">
+                <button class="photo-btn" onclick="document.getElementById('profile-photo-input').click()">Subir Foto</button>
+                ${member.photo ? '<button class="photo-btn" onclick="removeProfilePhoto()">Quitar Foto</button>' : ''}
+                <input type="file" id="profile-photo-input" accept="image/*" style="display:none" onchange="handleProfilePhoto(event)">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" id="f-edit-name" value="${member.name}">
+        </div>
+        <div class="form-group">
+            <label>Rol / Posición</label>
+            <input type="text" id="f-edit-role" value="${member.role || ''}" placeholder="Ej: Director de Ventas">
+        </div>
+        <div class="form-group">
+            <label>Inicial (si no hay foto)</label>
+            <input type="text" id="f-edit-avatar" value="${member.avatar || ''}" maxlength="2" style="width:80px;">
+        </div>
+        <div class="form-group">
+            <label>Color del perfil</label>
+            <input type="color" id="f-edit-color" value="${member.color || '#2979ff'}" style="width:60px;height:40px;padding:2px;">
+        </div>
+    `;
+    openModal('Editar Perfil — ' + member.name, html, () => {
+        member.name = document.getElementById('f-edit-name').value.trim() || member.name;
+        member.role = document.getElementById('f-edit-role').value.trim();
+        member.avatar = document.getElementById('f-edit-avatar').value.trim().toUpperCase() || member.name[0];
+        member.color = document.getElementById('f-edit-color').value;
+        if (window._pendingPhoto !== undefined) {
+            member.photo = window._pendingPhoto;
+            delete window._pendingPhoto;
+        }
+        saveState(); renderAll(); closeModal();
+        showToast('Perfil actualizado');
+    });
+}
+
+function handleProfilePhoto(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        // Resize to max 150x150 to keep localStorage/Supabase small
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const maxSize = 150;
+            let w = img.width, h = img.height;
+            if (w > h) { h = maxSize * h / w; w = maxSize; }
+            else { w = maxSize * w / h; h = maxSize; }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            window._pendingPhoto = dataUrl;
+            document.getElementById('profile-photo-preview').innerHTML = `<img src="${dataUrl}">`;
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeProfilePhoto() {
+    window._pendingPhoto = '';
+    document.getElementById('profile-photo-preview').innerHTML = '<span style="font-size:28px;">👤</span>';
 }
 
 // =====================================================================
@@ -1732,17 +2010,42 @@ function renderLeaderboard() {
         return;
     }
 
+    // Weekly MVP Banner
+    const mvp = getWeeklyMVP();
+    const mvpHTML = mvp ? `
+        <div class="mvp-banner">
+            <div class="mvp-trophy">🏆</div>
+            <div class="mvp-avatar" style="background:${mvp.color};">
+                ${mvp.photo ? `<img src="${mvp.photo}" alt="${mvp.name}">` : mvp.avatar}
+            </div>
+            <div class="mvp-info">
+                <div class="mvp-title">MVP de la Semana S${getDisplayWeek()} — ${mvp.name}</div>
+                <div class="mvp-desc">${mvp.hits}/${mvp.total} métricas cumplidas (${(mvp.hitRate*100).toFixed(0)}%) esta semana</div>
+            </div>
+        </div>` : '';
+
     const cards = ranked.map(m => {
         const progressColor = m.bonusStatus === 'secured' ? 'var(--gradient-green)' : 'var(--gradient-red)';
         const hitPct = (m.hitRate * 100).toFixed(0);
+        const xp = calculateXP(m.id);
+        const lvl = getLevel(xp);
+        const streak = calculateStreak(m.id);
+        const badges = calculateBadges(m.id);
+        const badgesHTML = badges.length > 0
+            ? `<div class="badges-row">${badges.map(b => `<div class="mini-badge" title="${b.title}">${b.icon}</div>`).join('')}</div>`
+            : '';
+
         return `
         <div class="team-card editable" onclick="showEditLeaderboardMember('${m.id}')">
-            <span class="edit-icon">&#9998;</span>
+            <span class="edit-icon" onclick="event.stopPropagation(); showEditMember('${m.id}')">&#9998;</span>
             <div class="rank ${m.rank === 1 ? 'first' : ''}">#${m.rank}</div>
-            <div class="avatar" style="background:${m.color};">${m.avatar}</div>
+            ${getAvatarHTML(m, 68)}
             <div class="name">${m.name}</div>
             <div class="role">${m.role}</div>
-            <div class="metric-label">${m.metricLabel || 'Sin métrica configurada'}</div>
+            <div class="level-badge" style="background:${lvl.color};">${lvl.title} &bull; ${xp} XP</div>
+            <div class="xp-bar"><div class="xp-fill" style="width:${(lvl.xpInLevel / lvl.xpNeeded * 100).toFixed(0)}%;"></div></div>
+            ${streak >= 2 ? `<div class="streak-badge">🔥 ${streak} semanas</div>` : ''}
+            <div class="metric-label" style="margin-top:10px;">${m.metricLabel || 'Sin métrica configurada'}</div>
             <div class="metric-value">${m.metricValue || '—'}</div>
             <div class="progress-bar">
                 <div class="progress-fill" style="width:${m.progress || 0}%;background:${progressColor};"></div>
@@ -1754,6 +2057,7 @@ function renderLeaderboard() {
             <div class="bonus-badge ${m.bonusStatus}">
                 ${m.bonusStatus === 'secured' ? '&#10003; Bono Asegurado' : '&#9888; En Riesgo'}
             </div>
+            ${badgesHTML}
         </div>`;
     }).join('');
 
@@ -1761,6 +2065,7 @@ function renderLeaderboard() {
         <div class="section-header">
             <div class="section-title"><span class="dot" style="background:var(--purple);"></span> Leaderboard de Rendimiento Individual</div>
         </div>
+        ${mvpHTML}
         <div class="leaderboard-grid">${cards}</div>
     `;
 }
