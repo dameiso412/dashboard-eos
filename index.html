@@ -1,0 +1,1888 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard EOS - Visión Ejecutiva</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* ===== VARIABLES ===== */
+        :root {
+            --bg: #0f1117;
+            --card: #1a1d27;
+            --card-hover: #222632;
+            --border: #2a2e3a;
+            --text: #e4e6eb;
+            --text-muted: #8b8fa3;
+            --green: #00c853;
+            --green-bg: rgba(0,200,83,.12);
+            --red: #ff3d57;
+            --red-bg: rgba(255,61,87,.12);
+            --yellow: #ffab00;
+            --yellow-bg: rgba(255,171,0,.12);
+            --blue: #2979ff;
+            --blue-bg: rgba(41,121,255,.12);
+            --purple: #7c4dff;
+            --gold: #ffd700;
+            --gradient-green: linear-gradient(135deg, #00c853, #00e676);
+            --gradient-red: linear-gradient(135deg, #ff3d57, #ff6b81);
+            --gradient-blue: linear-gradient(135deg, #2979ff, #448aff);
+            --gradient-purple: linear-gradient(135deg, #7c4dff, #b388ff);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: linear-gradient(135deg, #1a1d27 0%, #252838 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header-left h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #a0a4b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-left .date { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
+        .header-nav { display: flex; align-items: center; gap: 16px; }
+        .nav-group { display: flex; align-items: center; gap: 6px; }
+        .nav-group label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+        .nav-btn {
+            background: var(--card); border: 1px solid var(--border); color: var(--text);
+            width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 14px;
+            transition: background .2s;
+        }
+        .nav-btn:hover { background: var(--card-hover); }
+        .nav-current {
+            background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(41,121,255,.3);
+            padding: 4px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
+            min-width: 70px; text-align: center;
+        }
+        .header-actions { display: flex; gap: 8px; }
+        .icon-btn {
+            background: var(--card); border: 1px solid var(--border); color: var(--text-muted);
+            width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 16px;
+            transition: all .2s;
+        }
+        .icon-btn:hover { background: var(--card-hover); color: var(--text); }
+
+        /* ===== LAYOUT ===== */
+        .dashboard { max-width: 1440px; margin: 0 auto; padding: 28px 40px; }
+        .section { margin-bottom: 36px; }
+        .section-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 18px;
+        }
+        .section-title {
+            font-size: 17px; font-weight: 700;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--green); animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+        .add-btn {
+            background: var(--card); border: 1px solid var(--border); color: var(--blue);
+            padding: 6px 14px; border-radius: 10px; cursor: pointer;
+            font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 4px;
+            transition: all .2s;
+        }
+        .add-btn:hover { background: var(--blue-bg); border-color: rgba(41,121,255,.3); }
+
+        /* ===== EDIT BUTTONS ===== */
+        .editable { position: relative; cursor: pointer; }
+        .edit-icon {
+            position: absolute; top: 10px; right: 10px;
+            width: 28px; height: 28px; border-radius: 8px;
+            background: rgba(255,255,255,.06); border: 1px solid transparent;
+            color: var(--text-muted); font-size: 13px;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: all .2s; cursor: pointer;
+        }
+        .editable:hover .edit-icon { opacity: 1; }
+        .edit-icon:hover { background: var(--blue-bg); color: var(--blue); border-color: rgba(41,121,255,.3); }
+        .delete-icon {
+            position: absolute; top: 10px; right: 42px;
+            width: 28px; height: 28px; border-radius: 8px;
+            background: rgba(255,255,255,.06); border: 1px solid transparent;
+            color: var(--text-muted); font-size: 13px;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: all .2s; cursor: pointer;
+        }
+        .editable:hover .delete-icon { opacity: 1; }
+        .delete-icon:hover { background: var(--red-bg); color: var(--red); border-color: rgba(255,61,87,.3); }
+
+        /* ===== PULSO GRID ===== */
+        .pulso-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+        .pulso-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+            padding: 22px; transition: transform .2s, box-shadow .2s;
+        }
+        .pulso-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,.3); }
+        .pulso-card .label {
+            font-size: 12px; color: var(--text-muted); margin-bottom: 8px;
+            text-transform: uppercase; letter-spacing: .5px;
+        }
+        .pulso-card .value-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 14px; }
+        .pulso-card .value { font-size: 34px; font-weight: 800; }
+        .pulso-card .meta { font-size: 14px; color: var(--text-muted); }
+        .progress-bar {
+            width: 100%; height: 10px; background: rgba(255,255,255,.06);
+            border-radius: 10px; overflow: hidden;
+        }
+        .progress-fill { height: 100%; border-radius: 10px; transition: width 1s ease; }
+        .progress-info {
+            display: flex; justify-content: space-between; margin-top: 6px;
+            font-size: 12px; color: var(--text-muted);
+        }
+
+        /* ===== ROCKS ===== */
+        .rocks-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 12px; }
+        .rock-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+            padding: 18px; position: relative; overflow: hidden;
+        }
+        .rock-card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+        }
+        .rock-card.on-track::before { background: var(--gradient-green); }
+        .rock-card.off-track::before { background: var(--gradient-red); }
+        .rock-card .rock-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; padding-right: 70px; }
+        .rock-card .rock-owner { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+        .rock-card .rock-progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .rock-card .rock-progress-pct { font-size: 13px; font-weight: 700; min-width: 36px; }
+        .rock-card .rock-deadline { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+        .rock-card .milestones { margin-top: 8px; }
+        .rock-card .milestone {
+            font-size: 12px; color: var(--text-muted); padding: 2px 0;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .rock-card .milestone.done { text-decoration: line-through; opacity: .6; }
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+        }
+        .status-badge.on-track { background: var(--green-bg); color: var(--green); }
+        .status-badge.off-track { background: var(--red-bg); color: var(--red); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .status-dot.green { background: var(--green); }
+        .status-dot.red { background: var(--red); }
+
+        /* ===== SCORECARD ===== */
+        .table-wrapper { overflow-x: auto; border-radius: 16px; }
+        .scorecard-table {
+            width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0;
+            background: var(--card); border-radius: 16px; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .scorecard-table thead th {
+            background: rgba(255,255,255,.04); padding: 12px 14px; text-align: center;
+            font-size: 11px; text-transform: uppercase; letter-spacing: .4px;
+            color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        .scorecard-table thead th.sticky { position: sticky; z-index: 3; background: #1e2130; text-align: left; }
+        .scorecard-table thead th.col-num { left: 0; min-width: 36px; }
+        .scorecard-table thead th.col-metric { left: 36px; min-width: 170px; }
+        .scorecard-table thead th.col-owner { left: 206px; min-width: 90px; }
+        .scorecard-table thead th.col-goal { left: 296px; min-width: 80px; }
+        .scorecard-table thead th.col-week { min-width: 44px; cursor: pointer; }
+        .scorecard-table thead th.col-week:hover { color: var(--blue); }
+        .scorecard-table thead th.current-week { color: var(--blue); background: var(--blue-bg); }
+        .scorecard-table thead th.col-total { min-width: 60px; }
+        .scorecard-table tbody td {
+            padding: 11px 14px; font-size: 13px;
+            border-bottom: 1px solid rgba(255,255,255,.03);
+        }
+        .scorecard-table tbody td.sticky { position: sticky; z-index: 2; background: var(--card); }
+        .scorecard-table tbody td.col-num { left: 0; min-width: 36px; color: var(--text-muted); }
+        .scorecard-table tbody td.col-metric { left: 36px; min-width: 170px; font-weight: 500; }
+        .scorecard-table tbody td.col-owner { left: 206px; min-width: 90px; color: var(--text-muted); }
+        .scorecard-table tbody td.col-goal { left: 296px; min-width: 80px; color: var(--text-muted); }
+        .scorecard-table tbody tr:hover td { background: rgba(255,255,255,.02); }
+        .scorecard-table tbody tr:hover td.sticky { background: var(--card-hover); }
+        .scorecard-table tbody tr:last-child td { border-bottom: none; }
+        .week-cell {
+            text-align: center; cursor: pointer; font-size: 16px; transition: background .15s;
+        }
+        .week-cell:hover { background: rgba(255,255,255,.05) !important; }
+        .week-cell.hit { color: var(--green); }
+        .week-cell.miss { color: var(--red); }
+        .week-cell.empty { color: rgba(255,255,255,.1); font-size: 12px; }
+        .week-cell.current-week-col { background: rgba(41,121,255,.05); }
+        .total-cell { text-align: center; font-weight: 600; font-size: 12px; }
+        .metric-name-link { cursor: pointer; }
+        .metric-name-link:hover { color: var(--blue); }
+
+        /* ===== LEADERBOARD ===== */
+        .leaderboard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+        .team-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+            padding: 22px; text-align: center; position: relative; overflow: hidden;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .team-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+        .team-card .rank {
+            position: absolute; top: 12px; left: 14px;
+            font-size: 13px; font-weight: 700; color: var(--text-muted);
+        }
+        .team-card .rank.first { color: var(--gold); }
+        .avatar {
+            width: 68px; height: 68px; border-radius: 50%; margin: 0 auto 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 26px; font-weight: 700; color: #fff;
+        }
+        .team-card .name { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+        .team-card .role { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+        .team-card .metric-label {
+            font-size: 11px; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px;
+        }
+        .team-card .metric-value { font-size: 26px; font-weight: 800; margin-bottom: 12px; }
+        .team-card .progress-bar { margin-bottom: 6px; }
+        .bonus-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+            margin-top: 12px;
+        }
+        .bonus-badge.secured { background: var(--green-bg); color: var(--green); }
+        .bonus-badge.at-risk { background: var(--red-bg); color: var(--red); }
+
+        /* ===== FAME WALL ===== */
+        .fame-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 18px; flex-wrap: wrap; gap: 10px;
+        }
+        .fame-stats { display: flex; gap: 12px; align-items: center; }
+        .fame-bonus {
+            background: linear-gradient(135deg, rgba(255,215,0,.1), rgba(255,171,0,.1));
+            border: 1px solid rgba(255,215,0,.25); padding: 6px 16px;
+            border-radius: 12px; font-size: 13px; color: var(--gold); font-weight: 600;
+        }
+        .fame-criteria {
+            font-size: 12px; color: var(--text-muted); margin-bottom: 14px;
+        }
+        .fame-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 14px;
+        }
+        .fame-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+            padding: 18px; text-align: center; transition: transform .2s, box-shadow .2s;
+            position: relative;
+        }
+        .fame-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,.3); }
+        .fame-card.new-entry {
+            border-color: rgba(255,215,0,.3);
+            animation: glowGold 2s infinite alternate;
+        }
+        @keyframes glowGold {
+            from { box-shadow: 0 0 5px rgba(255,215,0,.1); }
+            to { box-shadow: 0 0 20px rgba(255,215,0,.15); }
+        }
+        .fame-card .new-tag {
+            position: absolute; top: 8px; right: 8px;
+            background: linear-gradient(135deg, #ffd700, #ffab00);
+            color: #000; font-size: 9px; font-weight: 800;
+            padding: 2px 8px; border-radius: 10px; text-transform: uppercase;
+        }
+        .fame-logo {
+            width: 56px; height: 56px; border-radius: 12px;
+            background: rgba(255,255,255,.06); margin: 0 auto 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; font-weight: 800; color: var(--text-muted);
+        }
+        .fame-card .client-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+        .fame-metrics { display: flex; justify-content: center; gap: 14px; margin-top: 8px; }
+        .fame-metric { text-align: center; }
+        .fm-value { font-size: 13px; font-weight: 700; color: var(--green); }
+        .fm-label { font-size: 10px; color: var(--text-muted); }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,.65);
+            z-index: 900; display: none; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+            width: 100%; max-width: 560px; max-height: 85vh; overflow-y: auto; padding: 28px;
+            animation: modalIn .2s ease;
+        }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .modal h2 { font-size: 17px; font-weight: 700; margin-bottom: 20px; }
+        .modal .form-group { margin-bottom: 14px; }
+        .modal label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .3px; }
+        .modal input, .modal select, .modal textarea {
+            width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border);
+            border-radius: 10px; color: var(--text); font-size: 14px; font-family: inherit;
+        }
+        .modal input:focus, .modal select:focus, .modal textarea:focus {
+            outline: none; border-color: var(--blue);
+        }
+        .modal select { cursor: pointer; }
+        .modal .slider-row { display: flex; align-items: center; gap: 12px; }
+        .modal .slider-row input[type=range] { flex: 1; padding: 0; }
+        .modal .slider-row .slider-val { font-weight: 700; font-size: 14px; min-width: 40px; }
+        .modal .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+        .btn {
+            padding: 10px 20px; border-radius: 10px; border: none;
+            cursor: pointer; font-weight: 600; font-size: 14px; font-family: inherit;
+            transition: opacity .2s;
+        }
+        .btn:hover { opacity: .85; }
+        .btn-primary { background: var(--blue); color: #fff; }
+        .btn-danger { background: var(--red); color: #fff; }
+        .btn-cancel { background: var(--border); color: var(--text); }
+        .modal .milestone-list { margin-top: 8px; }
+        .modal .milestone-item {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+        }
+        .modal .milestone-item input[type=text] { flex: 1; }
+        .modal .milestone-item input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
+        .modal .milestone-item .remove-ms {
+            background: none; border: none; color: var(--red); cursor: pointer;
+            font-size: 18px; padding: 0 4px;
+        }
+        .modal .add-ms-btn {
+            background: none; border: 1px dashed var(--border); color: var(--text-muted);
+            padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px;
+            margin-top: 4px; width: 100%; transition: all .2s;
+        }
+        .modal .add-ms-btn:hover { border-color: var(--blue); color: var(--blue); }
+        .modal .warning-box {
+            background: var(--yellow-bg); border: 1px solid rgba(255,171,0,.25);
+            border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--yellow);
+            margin-bottom: 14px;
+        }
+
+        /* ===== SETTINGS MODAL ===== */
+        .settings-section { margin-bottom: 20px; }
+        .settings-section h3 { font-size: 14px; margin-bottom: 10px; color: var(--text-muted); }
+        .member-row {
+            display: flex; align-items: center; gap: 10px; padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,.03);
+        }
+        .member-row .member-avatar {
+            width: 32px; height: 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: 700; color: #fff;
+        }
+        .member-row .member-info { flex: 1; }
+        .member-row .member-name { font-size: 14px; font-weight: 600; }
+        .member-row .member-role { font-size: 12px; color: var(--text-muted); }
+        .export-btns { display: flex; gap: 10px; margin-top: 10px; }
+        .export-btns .btn { font-size: 13px; padding: 8px 16px; }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center; padding: 40px 20px; color: var(--text-muted);
+        }
+        .empty-state .empty-icon { font-size: 36px; margin-bottom: 10px; opacity: .3; }
+        .empty-state p { font-size: 14px; margin-bottom: 14px; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1100px) {
+            .pulso-grid, .leaderboard-grid { grid-template-columns: repeat(2, 1fr); }
+            .rocks-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 700px) {
+            .dashboard { padding: 16px; }
+            .header { padding: 12px 16px; }
+            .pulso-grid, .leaderboard-grid { grid-template-columns: 1fr; }
+            .header-nav { flex-wrap: wrap; }
+            .scorecard-table thead th.col-metric { min-width: 130px; }
+            .scorecard-table thead th.col-owner { display: none; }
+            .scorecard-table tbody td.col-owner { display: none; }
+            .scorecard-table thead th.col-owner ~ th.sticky,
+            .scorecard-table tbody td.col-owner ~ td.sticky { left: auto; }
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed; bottom: 30px; right: 30px; z-index: 999;
+            background: var(--green); color: #fff; padding: 12px 22px;
+            border-radius: 12px; font-size: 14px; font-weight: 600;
+            opacity: 0; transform: translateY(20px);
+            transition: all .3s ease; pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        /* ===== SYNC STATUS ===== */
+        .sync-indicator {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 11px; color: var(--text-muted);
+            padding: 3px 10px; border-radius: 8px;
+            background: rgba(255,255,255,.03);
+        }
+        .sync-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .sync-dot.connected { background: var(--green); }
+        .sync-dot.offline { background: var(--yellow); }
+        .sync-dot.error { background: var(--red); }
+        .sync-dot.syncing { background: var(--blue); animation: pulse 1s infinite; }
+
+        /* ===== SETUP BANNER ===== */
+        .setup-banner {
+            background: linear-gradient(135deg, rgba(41,121,255,.08), rgba(124,77,255,.08));
+            border: 1px solid rgba(41,121,255,.2); border-radius: 14px;
+            padding: 20px 24px; margin-bottom: 24px;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 16px; flex-wrap: wrap;
+        }
+        .setup-banner .setup-text { flex: 1; }
+        .setup-banner .setup-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+        .setup-banner .setup-desc { font-size: 13px; color: var(--text-muted); }
+        .setup-banner .btn { white-space: nowrap; }
+        .setup-banner .dismiss-btn {
+            background: none; border: none; color: var(--text-muted);
+            cursor: pointer; font-size: 18px; padding: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header" id="header"></header>
+
+<!-- Dashboard -->
+<div class="dashboard">
+    <div id="setup-banner"></div>
+    <div class="section" id="section-pulso"></div>
+    <div class="section" id="section-scorecard"></div>
+    <div class="section" id="section-leaderboard"></div>
+    <div class="section" id="section-fame"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+        <h2 id="modal-title"></h2>
+        <div id="modal-body"></div>
+        <div class="btn-row" id="modal-buttons">
+            <button class="btn btn-cancel" onclick="closeModal()">Cancelar</button>
+            <button class="btn btn-primary" id="modal-save">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Hidden file input for import -->
+<input type="file" id="import-file" accept=".json" style="display:none">
+
+<script>
+// =====================================================================
+// ===== DEFAULT STATE =====
+// =====================================================================
+const DEFAULT_STATE = {
+    version: 1,
+    currentYear: new Date().getFullYear(),
+    currentQuarter: Math.ceil((new Date().getMonth() + 1) / 3),
+    currentWeek: null,
+    settings: {
+        teamMembers: [
+            { id: "tomas", name: "Tomás", role: "Director / Ventas", avatar: "T", color: "#2979ff" },
+            { id: "nicolas", name: "Nicolás", role: "Account Management", avatar: "N", color: "#7c4dff" },
+            { id: "christian", name: "Christian", role: "Marketing / Ads", avatar: "C", color: "#00c853" },
+            { id: "roberto", name: "Roberto", role: "Operaciones / Entrega", avatar: "R", color: "#ff3d57" }
+        ]
+    },
+    quarters: {}
+};
+
+function getDefaultQuarter() {
+    return {
+        pulso: {
+            revenueMonthly: { current: 0, goal: 100000 },
+            utilityQuarterly: { current: 0, goal: 60000 }
+        },
+        rocks: [],
+        scorecard: { metrics: [], weeks: {} },
+        leaderboard: {},
+        fameWall: []
+    };
+}
+
+function getSeedQuarter() {
+    return {
+        pulso: {
+            revenueMonthly: { current: 82400, goal: 100000 },
+            utilityQuarterly: { current: 48200, goal: 60000 }
+        },
+        rocks: [
+            { id: "r1", name: "Lanzar 3 nuevos verticales de servicio", ownerId: "tomas", status: "on-track", progress: 70, deadline: "2026-03-31", milestones: [{ text: "Investigación de mercado", done: true }, { text: "MVP listo", done: true }, { text: "Lanzamiento público", done: false }] },
+            { id: "r2", name: "Alcanzar NRR del 110%", ownerId: "nicolas", status: "on-track", progress: 80, deadline: "2026-03-31", milestones: [{ text: "Identificar cuentas clave", done: true }, { text: "Ejecutar plan de upsell", done: true }, { text: "Cerrar expansiones Q1", done: false }] },
+            { id: "r3", name: "Reducir churn rate al 3%", ownerId: "roberto", status: "off-track", progress: 45, deadline: "2026-03-31", milestones: [{ text: "Análisis de razones de churn", done: true }, { text: "Implementar alertas tempranas", done: false }, { text: "Programa de retención", done: false }] }
+        ],
+        scorecard: {
+            metrics: [
+                { id: "m1", metric: "Facturación semanal", ownerId: "tomas", goal: "$25,000", direction: "gte" },
+                { id: "m2", metric: "Nuevos leads calificados", ownerId: "christian", goal: "15", direction: "gte" },
+                { id: "m3", metric: "Tasa de conversión de leads", ownerId: "christian", goal: "25%", direction: "gte" },
+                { id: "m4", metric: "ROAS promedio clientes", ownerId: "christian", goal: "4.0x", direction: "gte" },
+                { id: "m5", metric: "NRR (Net Revenue Retention)", ownerId: "nicolas", goal: "105%", direction: "gte" },
+                { id: "m6", metric: "Churn rate mensual", ownerId: "roberto", goal: "3%", direction: "lte" },
+                { id: "m7", metric: "Tasa de entrega a tiempo", ownerId: "roberto", goal: "95%", direction: "gte" },
+                { id: "m8", metric: "Tickets de soporte resueltos", ownerId: "roberto", goal: "50", direction: "gte" },
+                { id: "m9", metric: "Reuniones de upsell realizadas", ownerId: "nicolas", goal: "8", direction: "gte" },
+                { id: "m10", metric: "Propuestas enviadas", ownerId: "tomas", goal: "10", direction: "gte" },
+                { id: "m11", metric: "Costo de adquisición (CAC)", ownerId: "christian", goal: "$800", direction: "lte" },
+                { id: "m12", metric: "Satisfacción del cliente (NPS)", ownerId: "roberto", goal: "70", direction: "gte" },
+                { id: "m13", metric: "Horas facturables del equipo", ownerId: "tomas", goal: "160h", direction: "gte" }
+            ],
+            weeks: {
+                "12": {
+                    "m1": { result: "$27,300", good: true }, "m2": { result: "18", good: true },
+                    "m3": { result: "22%", good: false }, "m4": { result: "4.3x", good: true },
+                    "m5": { result: "108%", good: true }, "m6": { result: "4.1%", good: false },
+                    "m7": { result: "97%", good: true }, "m8": { result: "47", good: false },
+                    "m9": { result: "10", good: true }, "m10": { result: "12", good: true },
+                    "m11": { result: "$720", good: true }, "m12": { result: "74", good: true },
+                    "m13": { result: "152h", good: false }
+                }
+            }
+        },
+        leaderboard: {
+            tomas: { metricLabel: "Tasa de Cumplimiento de Rocks", metricValue: "85%", progress: 85, goal: "80%" },
+            nicolas: { metricLabel: "NRR (Net Revenue Retention)", metricValue: "108%", progress: 90, goal: "105%" },
+            christian: { metricLabel: "ROAS Promedio", metricValue: "4.3x", progress: 78, goal: "4.5x" },
+            roberto: { metricLabel: "Tasa de Entrega a Tiempo", metricValue: "97%", progress: 97, goal: "95%" }
+        },
+        fameWall: [
+            { id: "f1", name: "Grupo Madera MX", initials: "GM", retentionMonths: 14, roas: 5.2, addedDate: "2025-07-01" },
+            { id: "f2", name: "AutoParts Pro", initials: "AP", retentionMonths: 11, roas: 6.1, addedDate: "2025-09-01" },
+            { id: "f3", name: "Dental Plus", initials: "DP", retentionMonths: 9, roas: 4.8, addedDate: "2025-11-01" },
+            { id: "f4", name: "Fit Academy", initials: "FA", retentionMonths: 8, roas: 4.5, addedDate: "2025-12-01" },
+            { id: "f5", name: "TechStore MX", initials: "TS", retentionMonths: 7, roas: 5.7, addedDate: "2026-01-15" },
+            { id: "f6", name: "Casa & Diseño", initials: "CD", retentionMonths: 7, roas: 4.2, addedDate: "2026-03-10" },
+            { id: "f7", name: "Nutrilab", initials: "NL", retentionMonths: 6, roas: 4.9, addedDate: "2026-03-18" }
+        ]
+    };
+}
+
+// =====================================================================
+// ===== SUPABASE LAYER =====
+// =====================================================================
+let supabase = null;
+let syncStatus = 'offline'; // 'connected', 'offline', 'syncing', 'error'
+let savePending = null;
+
+function getSupabaseConfig() {
+    const url = localStorage.getItem('eos_supabase_url') || '';
+    const key = localStorage.getItem('eos_supabase_key') || '';
+    return { url, key };
+}
+
+function setSupabaseConfig(url, key) {
+    localStorage.setItem('eos_supabase_url', url);
+    localStorage.setItem('eos_supabase_key', key);
+    initSupabase();
+}
+
+function initSupabase() {
+    const { url, key } = getSupabaseConfig();
+    if (!url || !key || typeof window.supabase === 'undefined') {
+        supabase = null;
+        syncStatus = 'offline';
+        return;
+    }
+    try {
+        supabase = window.supabase.createClient(url, key);
+        syncStatus = 'connected';
+        // Try initial cloud load
+        loadFromCloud();
+    } catch (e) {
+        console.error('Supabase init error:', e);
+        supabase = null;
+        syncStatus = 'error';
+    }
+}
+
+async function loadFromCloud() {
+    if (!supabase) return false;
+    try {
+        syncStatus = 'syncing';
+        updateSyncUI();
+        const qk = getQuarterKey(state.currentYear, state.currentQuarter);
+
+        // Load all tables in parallel
+        const [configRes, membersRes, pulsoRes, rocksRes, metricsRes, resultsRes, lbRes, fameRes] = await Promise.all([
+            supabase.from('dashboard_config').select('*').eq('id', 'main').single(),
+            supabase.from('team_members').select('*'),
+            supabase.from('pulso').select('*').eq('quarter_key', qk).maybeSingle(),
+            supabase.from('rocks').select('*').eq('quarter_key', qk),
+            supabase.from('scorecard_metrics').select('*').eq('quarter_key', qk).order('sort_order'),
+            supabase.from('scorecard_results').select('*'),
+            supabase.from('leaderboard_entries').select('*').eq('quarter_key', qk),
+            supabase.from('fame_wall').select('*').eq('quarter_key', qk)
+        ]);
+
+        // Check for critical errors
+        if (membersRes.error) throw membersRes.error;
+
+        // Assemble state from tables
+        if (configRes.data) {
+            state.currentYear = configRes.data.current_year;
+            state.currentQuarter = configRes.data.current_quarter;
+            state.currentWeek = configRes.data.current_week;
+        }
+        if (membersRes.data && membersRes.data.length > 0) {
+            state.settings.teamMembers = membersRes.data.map(m => ({
+                id: m.id, name: m.name, role: m.role || '', avatar: m.avatar || '', color: m.color || '#2979ff'
+            }));
+        }
+
+        const qd = getQuarterData();
+        if (pulsoRes.data) {
+            qd.pulso.revenueMonthly = { current: Number(pulsoRes.data.revenue_current), goal: Number(pulsoRes.data.revenue_goal) };
+            qd.pulso.utilityQuarterly = { current: Number(pulsoRes.data.utility_current), goal: Number(pulsoRes.data.utility_goal) };
+        }
+        if (rocksRes.data) {
+            qd.rocks = rocksRes.data.map(r => ({
+                id: r.id, name: r.name, ownerId: r.owner_id, status: r.status,
+                progress: r.progress, deadline: r.deadline,
+                milestones: typeof r.milestones === 'string' ? JSON.parse(r.milestones) : (r.milestones || [])
+            }));
+        }
+        if (metricsRes.data) {
+            qd.scorecard.metrics = metricsRes.data.map(m => ({
+                id: m.id, metric: m.metric, ownerId: m.owner_id, goal: m.goal || '', direction: m.direction || 'gte'
+            }));
+        }
+        if (resultsRes.data) {
+            qd.scorecard.weeks = {};
+            // Filter results to metrics that belong to this quarter
+            const metricIds = new Set((metricsRes.data || []).map(m => m.id));
+            resultsRes.data.filter(r => metricIds.has(r.metric_id)).forEach(r => {
+                if (!qd.scorecard.weeks[r.week]) qd.scorecard.weeks[r.week] = {};
+                qd.scorecard.weeks[r.week][r.metric_id] = { result: r.result, good: r.good };
+            });
+        }
+        if (lbRes.data) {
+            qd.leaderboard = {};
+            lbRes.data.forEach(lb => {
+                qd.leaderboard[lb.member_id] = {
+                    metricLabel: lb.metric_label || '', metricValue: lb.metric_value || '',
+                    progress: lb.progress || 0, goal: lb.goal || ''
+                };
+            });
+        }
+        if (fameRes.data) {
+            qd.fameWall = fameRes.data.map(f => ({
+                id: f.id, name: f.name, initials: f.initials,
+                retentionMonths: f.retention_months, roas: Number(f.roas),
+                addedDate: f.added_date
+            }));
+        }
+
+        localStorage.setItem('eos_dashboard', JSON.stringify(state));
+        renderAll();
+        syncStatus = 'connected';
+        updateSyncUI();
+        return true;
+    } catch (e) {
+        console.error('Cloud load error:', e);
+        syncStatus = 'error';
+        updateSyncUI();
+        return false;
+    }
+}
+
+async function saveToCloud() {
+    if (!supabase) return;
+    try {
+        syncStatus = 'syncing';
+        updateSyncUI();
+        const qk = getQuarterKey(state.currentYear, state.currentQuarter);
+        const qd = getQuarterData();
+
+        // Save config
+        await supabase.from('dashboard_config').upsert({
+            id: 'main', current_year: state.currentYear,
+            current_quarter: state.currentQuarter, current_week: state.currentWeek
+        }, { onConflict: 'id' });
+
+        // Save team members
+        if (state.settings.teamMembers.length > 0) {
+            await supabase.from('team_members').upsert(
+                state.settings.teamMembers.map(m => ({
+                    id: m.id, name: m.name, role: m.role, avatar: m.avatar, color: m.color
+                })), { onConflict: 'id' }
+            );
+        }
+
+        // Save pulso
+        await supabase.from('pulso').upsert({
+            quarter_key: qk,
+            revenue_current: qd.pulso.revenueMonthly.current,
+            revenue_goal: qd.pulso.revenueMonthly.goal,
+            utility_current: qd.pulso.utilityQuarterly.current,
+            utility_goal: qd.pulso.utilityQuarterly.goal
+        }, { onConflict: 'quarter_key' });
+
+        // Save rocks
+        if (qd.rocks.length > 0) {
+            await supabase.from('rocks').upsert(
+                qd.rocks.map(r => ({
+                    id: r.id, quarter_key: qk, name: r.name, owner_id: r.ownerId,
+                    status: r.status, progress: r.progress, deadline: r.deadline || null,
+                    milestones: r.milestones || []
+                })), { onConflict: 'id' }
+            );
+        }
+
+        // Save scorecard metrics
+        if (qd.scorecard.metrics.length > 0) {
+            await supabase.from('scorecard_metrics').upsert(
+                qd.scorecard.metrics.map((m, i) => ({
+                    id: m.id, quarter_key: qk, metric: m.metric, owner_id: m.ownerId,
+                    goal: m.goal, direction: m.direction, sort_order: i + 1
+                })), { onConflict: 'id' }
+            );
+        }
+
+        // Save scorecard results
+        const allResults = [];
+        Object.entries(qd.scorecard.weeks).forEach(([week, metrics]) => {
+            Object.entries(metrics).forEach(([metricId, data]) => {
+                allResults.push({
+                    id: `sr-${metricId}-${week}`,
+                    metric_id: metricId, week: parseInt(week),
+                    result: data.result, good: data.good
+                });
+            });
+        });
+        if (allResults.length > 0) {
+            await supabase.from('scorecard_results').upsert(allResults, { onConflict: 'id' });
+        }
+
+        // Save leaderboard
+        const lbEntries = Object.entries(qd.leaderboard).map(([memberId, data]) => ({
+            id: `lb-${memberId}-${qk}`, member_id: memberId, quarter_key: qk,
+            metric_label: data.metricLabel, metric_value: data.metricValue,
+            progress: data.progress, goal: data.goal
+        }));
+        if (lbEntries.length > 0) {
+            await supabase.from('leaderboard_entries').upsert(lbEntries, { onConflict: 'id' });
+        }
+
+        // Save fame wall
+        if (qd.fameWall.length > 0) {
+            await supabase.from('fame_wall').upsert(
+                qd.fameWall.map(f => ({
+                    id: f.id, quarter_key: qk, name: f.name, initials: f.initials,
+                    retention_months: f.retentionMonths, roas: f.roas,
+                    added_date: f.addedDate || null
+                })), { onConflict: 'id' }
+            );
+        }
+
+        syncStatus = 'connected';
+    } catch (e) {
+        console.error('Cloud save error:', e);
+        syncStatus = 'error';
+    }
+    updateSyncUI();
+}
+
+function updateSyncUI() {
+    const el = document.getElementById('sync-status');
+    if (!el) return;
+    const labels = {
+        connected: 'Sincronizado',
+        offline: 'Solo local',
+        syncing: 'Sincronizando...',
+        error: 'Error de sync'
+    };
+    el.innerHTML = `<span class="sync-dot ${syncStatus}"></span> ${labels[syncStatus] || syncStatus}`;
+}
+
+// =====================================================================
+// ===== DATA LAYER =====
+// =====================================================================
+let state = {};
+
+function loadState() {
+    try {
+        const raw = localStorage.getItem('eos_dashboard');
+        if (raw) {
+            state = JSON.parse(raw);
+            if (!state.settings) state.settings = DEFAULT_STATE.settings;
+            if (!state.quarters) state.quarters = {};
+            return;
+        }
+    } catch (e) { console.error('Error loading state:', e); }
+    // First load: use seed data
+    state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    const key = state.currentYear + '-Q' + state.currentQuarter;
+    state.quarters[key] = getSeedQuarter();
+    saveState();
+}
+
+function saveState() {
+    // Always save locally (instant)
+    try { localStorage.setItem('eos_dashboard', JSON.stringify(state)); }
+    catch (e) { console.error('Error saving state:', e); }
+    // Debounced cloud sync
+    if (supabase) {
+        clearTimeout(savePending);
+        savePending = setTimeout(() => saveToCloud(), 1000);
+    }
+}
+
+function getQuarterKey(y, q) { return y + '-Q' + q; }
+
+function getQuarterData() {
+    const key = getQuarterKey(state.currentYear, state.currentQuarter);
+    if (!state.quarters[key]) {
+        state.quarters[key] = getDefaultQuarter();
+        saveState();
+    }
+    return state.quarters[key];
+}
+
+function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+function getMember(id) { return state.settings.teamMembers.find(m => m.id === id); }
+function getMemberName(id) { const m = getMember(id); return m ? m.name : id; }
+
+// =====================================================================
+// ===== DATE UTILITIES =====
+// =====================================================================
+function getCurrentQuarterInfo() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const quarter = Math.ceil((now.getMonth() + 1) / 3);
+    const qStartMonth = (quarter - 1) * 3;
+    const qStart = new Date(year, qStartMonth, 1);
+    const daysSinceStart = Math.floor((now - qStart) / 86400000);
+    const weekInQuarter = Math.min(13, Math.max(1, Math.ceil((daysSinceStart + 1) / 7)));
+    return { year, quarter, weekInQuarter };
+}
+
+function getDisplayWeek() {
+    if (state.currentWeek) return state.currentWeek;
+    const info = getCurrentQuarterInfo();
+    if (info.year === state.currentYear && info.quarter === state.currentQuarter) {
+        return info.weekInQuarter;
+    }
+    return 13;
+}
+
+function formatCurrency(n) {
+    return '$' + n.toLocaleString('en-US');
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function isNewEntry(addedDate) {
+    if (!addedDate) return false;
+    const added = new Date(addedDate);
+    const now = new Date();
+    return (now - added) < 30 * 86400000;
+}
+
+const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function getHeaderDate() {
+    const now = new Date();
+    return now.getDate() + ' ' + MONTHS_ES[now.getMonth()] + ' ' + now.getFullYear();
+}
+
+// =====================================================================
+// ===== TOAST =====
+// =====================================================================
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// =====================================================================
+// ===== MODAL SYSTEM =====
+// =====================================================================
+let currentModalSave = null;
+
+function openModal(title, bodyHTML, onSave, opts = {}) {
+    const overlay = document.getElementById('modal-overlay');
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').innerHTML = bodyHTML;
+    const btnRow = document.getElementById('modal-buttons');
+    if (opts.hideButtons) {
+        btnRow.style.display = 'none';
+    } else {
+        btnRow.style.display = 'flex';
+        const saveBtn = document.getElementById('modal-save');
+        saveBtn.textContent = opts.saveText || 'Guardar';
+        if (opts.saveClass === 'danger') {
+            saveBtn.className = 'btn btn-danger';
+        } else {
+            saveBtn.className = 'btn btn-primary';
+        }
+    }
+    currentModalSave = onSave;
+    overlay.classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('active');
+    currentModalSave = null;
+}
+
+document.getElementById('modal-save').addEventListener('click', () => {
+    if (currentModalSave) currentModalSave();
+});
+document.getElementById('modal-overlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+});
+
+// =====================================================================
+// ===== MODAL FORMS =====
+// =====================================================================
+function showEditPulso(type) {
+    const qd = getQuarterData();
+    const data = type === 'revenue' ? qd.pulso.revenueMonthly : qd.pulso.utilityQuarterly;
+    const title = type === 'revenue' ? 'Editar Facturación Mensual' : 'Editar Utilidad Bruta Trimestral';
+    const html = `
+        <div class="form-group">
+            <label>Valor Actual ($)</label>
+            <input type="number" id="f-current" value="${data.current}" step="100">
+        </div>
+        <div class="form-group">
+            <label>Meta ($)</label>
+            <input type="number" id="f-goal" value="${data.goal}" step="100">
+        </div>
+    `;
+    openModal(title, html, () => {
+        data.current = parseFloat(document.getElementById('f-current').value) || 0;
+        data.goal = parseFloat(document.getElementById('f-goal').value) || 1;
+        saveState(); renderPulso(); closeModal();
+        showToast('Valores actualizados');
+    });
+}
+
+function showAddRock() { showEditRockForm(null); }
+function showEditRock(id) { showEditRockForm(id); }
+
+function showEditRockForm(rockId) {
+    const qd = getQuarterData();
+    const rock = rockId ? qd.rocks.find(r => r.id === rockId) : null;
+    const title = rock ? 'Editar Rock' : 'Nuevo Rock';
+    const members = state.settings.teamMembers;
+    const ownerOptions = members.map(m =>
+        `<option value="${m.id}" ${rock && rock.ownerId === m.id ? 'selected' : ''}>${m.name}</option>`
+    ).join('');
+    const milestones = rock ? rock.milestones || [] : [];
+    const msHTML = milestones.map((ms, i) => `
+        <div class="milestone-item" data-idx="${i}">
+            <input type="checkbox" ${ms.done ? 'checked' : ''} class="ms-check">
+            <input type="text" value="${ms.text}" class="ms-text" placeholder="Milestone...">
+            <button class="remove-ms" onclick="this.parentElement.remove()">&times;</button>
+        </div>
+    `).join('');
+
+    const html = `
+        <div class="form-group">
+            <label>Nombre del Rock</label>
+            <input type="text" id="f-rock-name" value="${rock ? rock.name : ''}" placeholder="Ej: Lanzar nuevo producto">
+        </div>
+        <div class="form-group">
+            <label>Dueño</label>
+            <select id="f-rock-owner">${ownerOptions}</select>
+        </div>
+        <div class="form-group">
+            <label>Status</label>
+            <select id="f-rock-status">
+                <option value="on-track" ${rock && rock.status === 'on-track' ? 'selected' : ''}>On Track</option>
+                <option value="off-track" ${rock && rock.status === 'off-track' ? 'selected' : ''}>Off Track</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Progreso</label>
+            <div class="slider-row">
+                <input type="range" id="f-rock-progress" min="0" max="100" value="${rock ? rock.progress : 0}"
+                    oninput="document.getElementById('progress-val').textContent = this.value + '%'">
+                <span class="slider-val" id="progress-val">${rock ? rock.progress : 0}%</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Fecha Límite</label>
+            <input type="date" id="f-rock-deadline" value="${rock ? rock.deadline : ''}">
+        </div>
+        <div class="form-group">
+            <label>Milestones</label>
+            <div id="milestone-list" class="milestone-list">${msHTML}</div>
+            <button class="add-ms-btn" onclick="addMilestoneRow()">+ Agregar Milestone</button>
+        </div>
+        ${rock ? `<div style="margin-top:16px"><button class="btn btn-danger" onclick="deleteRock('${rock.id}')" style="width:100%">Eliminar Rock</button></div>` : ''}
+    `;
+    openModal(title, html, () => {
+        const name = document.getElementById('f-rock-name').value.trim();
+        if (!name) return;
+        const ms = [];
+        document.querySelectorAll('#milestone-list .milestone-item').forEach(el => {
+            const text = el.querySelector('.ms-text').value.trim();
+            if (text) ms.push({ text, done: el.querySelector('.ms-check').checked });
+        });
+        const obj = {
+            id: rock ? rock.id : generateId(),
+            name,
+            ownerId: document.getElementById('f-rock-owner').value,
+            status: document.getElementById('f-rock-status').value,
+            progress: parseInt(document.getElementById('f-rock-progress').value),
+            deadline: document.getElementById('f-rock-deadline').value,
+            milestones: ms
+        };
+        if (rock) {
+            const idx = qd.rocks.findIndex(r => r.id === rock.id);
+            qd.rocks[idx] = obj;
+        } else {
+            qd.rocks.push(obj);
+        }
+        saveState(); renderPulso(); closeModal();
+        showToast(rock ? 'Rock actualizado' : 'Rock creado');
+    });
+}
+
+function addMilestoneRow() {
+    const list = document.getElementById('milestone-list');
+    const div = document.createElement('div');
+    div.className = 'milestone-item';
+    div.innerHTML = `
+        <input type="checkbox" class="ms-check">
+        <input type="text" class="ms-text" placeholder="Milestone...">
+        <button class="remove-ms" onclick="this.parentElement.remove()">&times;</button>
+    `;
+    list.appendChild(div);
+    div.querySelector('.ms-text').focus();
+}
+
+function deleteRock(id) {
+    const qd = getQuarterData();
+    qd.rocks = qd.rocks.filter(r => r.id !== id);
+    saveState(); renderPulso(); closeModal();
+    showToast('Rock eliminado');
+}
+
+function showEditScorecardMetric(metricId) {
+    const qd = getQuarterData();
+    const metric = metricId ? qd.scorecard.metrics.find(m => m.id === metricId) : null;
+    const title = metric ? 'Editar Métrica' : 'Nueva Métrica';
+    const members = state.settings.teamMembers;
+    const ownerOptions = members.map(m =>
+        `<option value="${m.id}" ${metric && metric.ownerId === m.id ? 'selected' : ''}>${m.name}</option>`
+    ).join('');
+    const html = `
+        <div class="form-group">
+            <label>Nombre de la Métrica</label>
+            <input type="text" id="f-m-name" value="${metric ? metric.metric : ''}" placeholder="Ej: Facturación semanal">
+        </div>
+        <div class="form-group">
+            <label>Dueño</label>
+            <select id="f-m-owner">${ownerOptions}</select>
+        </div>
+        <div class="form-group">
+            <label>Objetivo</label>
+            <input type="text" id="f-m-goal" value="${metric ? metric.goal : ''}" placeholder="Ej: $25,000 o 95%">
+        </div>
+        <div class="form-group">
+            <label>Dirección</label>
+            <select id="f-m-dir">
+                <option value="gte" ${!metric || metric.direction === 'gte' ? 'selected' : ''}>Mayor es mejor (≥)</option>
+                <option value="lte" ${metric && metric.direction === 'lte' ? 'selected' : ''}>Menor es mejor (≤)</option>
+            </select>
+        </div>
+        ${metric ? `<div style="margin-top:16px"><button class="btn btn-danger" onclick="deleteScorecardMetric('${metric.id}')" style="width:100%">Eliminar Métrica</button></div>` : ''}
+    `;
+    openModal(title, html, () => {
+        const name = document.getElementById('f-m-name').value.trim();
+        if (!name) return;
+        const obj = {
+            id: metric ? metric.id : generateId(),
+            metric: name,
+            ownerId: document.getElementById('f-m-owner').value,
+            goal: document.getElementById('f-m-goal').value.trim(),
+            direction: document.getElementById('f-m-dir').value
+        };
+        if (metric) {
+            const idx = qd.scorecard.metrics.findIndex(m => m.id === metric.id);
+            qd.scorecard.metrics[idx] = obj;
+        } else {
+            qd.scorecard.metrics.push(obj);
+        }
+        saveState(); renderScorecard(); closeModal();
+        showToast(metric ? 'Métrica actualizada' : 'Métrica creada');
+    });
+}
+
+function deleteScorecardMetric(id) {
+    const qd = getQuarterData();
+    qd.scorecard.metrics = qd.scorecard.metrics.filter(m => m.id !== id);
+    // Also remove week results for this metric
+    Object.keys(qd.scorecard.weeks).forEach(w => {
+        delete qd.scorecard.weeks[w][id];
+    });
+    saveState(); renderScorecard(); closeModal();
+    showToast('Métrica eliminada');
+}
+
+function showEditWeekResult(metricId, week) {
+    const qd = getQuarterData();
+    const metric = qd.scorecard.metrics.find(m => m.id === metricId);
+    if (!metric) return;
+    const weekData = qd.scorecard.weeks[week] && qd.scorecard.weeks[week][metricId];
+    const html = `
+        <div style="margin-bottom:14px; padding:12px; background:var(--bg); border-radius:10px;">
+            <div style="font-size:13px; color:var(--text-muted);">Métrica</div>
+            <div style="font-weight:600;">${metric.metric}</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                Meta: ${metric.goal} &bull; Dirección: ${metric.direction === 'gte' ? 'Mayor es mejor' : 'Menor es mejor'}
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Resultado Semana ${week}</label>
+            <input type="text" id="f-wr-result" value="${weekData ? weekData.result : ''}" placeholder="Ej: $27,300 o 95%">
+        </div>
+        <div class="form-group">
+            <label>Status</label>
+            <select id="f-wr-status">
+                <option value="true" ${weekData && weekData.good ? 'selected' : ''}>Hit (cumplió)</option>
+                <option value="false" ${weekData && !weekData.good ? 'selected' : ''}>Miss (no cumplió)</option>
+            </select>
+        </div>
+        ${weekData ? `<div style="margin-top:16px"><button class="btn btn-danger" onclick="deleteWeekResult('${metricId}', '${week}')" style="width:100%">Borrar Resultado</button></div>` : ''}
+    `;
+    openModal(`Resultado — S${week}`, html, () => {
+        const result = document.getElementById('f-wr-result').value.trim();
+        if (!result) return;
+        if (!qd.scorecard.weeks[week]) qd.scorecard.weeks[week] = {};
+        qd.scorecard.weeks[week][metricId] = {
+            result,
+            good: document.getElementById('f-wr-status').value === 'true'
+        };
+        saveState(); renderScorecard(); closeModal();
+        showToast('Resultado guardado');
+    });
+}
+
+function deleteWeekResult(metricId, week) {
+    const qd = getQuarterData();
+    if (qd.scorecard.weeks[week]) {
+        delete qd.scorecard.weeks[week][metricId];
+    }
+    saveState(); renderScorecard(); closeModal();
+    showToast('Resultado eliminado');
+}
+
+function showEditLeaderboardMember(memberId) {
+    const qd = getQuarterData();
+    const member = getMember(memberId);
+    const lb = qd.leaderboard[memberId] || {};
+    const html = `
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
+            <div style="width:48px;height:48px;border-radius:50%;background:${member.color};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;">${member.avatar}</div>
+            <div>
+                <div style="font-weight:700;">${member.name}</div>
+                <div style="font-size:12px;color:var(--text-muted);">${member.role}</div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Métrica Clave (etiqueta)</label>
+            <input type="text" id="f-lb-label" value="${lb.metricLabel || ''}" placeholder="Ej: Tasa de Cumplimiento de Rocks">
+        </div>
+        <div class="form-group">
+            <label>Valor Actual</label>
+            <input type="text" id="f-lb-value" value="${lb.metricValue || ''}" placeholder="Ej: 85%">
+        </div>
+        <div class="form-group">
+            <label>Progreso (%)</label>
+            <div class="slider-row">
+                <input type="range" id="f-lb-progress" min="0" max="100" value="${lb.progress || 0}"
+                    oninput="document.getElementById('lb-progress-val').textContent = this.value + '%'">
+                <span class="slider-val" id="lb-progress-val">${lb.progress || 0}%</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Meta</label>
+            <input type="text" id="f-lb-goal" value="${lb.goal || ''}" placeholder="Ej: 80%">
+        </div>
+    `;
+    openModal('Editar — ' + member.name, html, () => {
+        qd.leaderboard[memberId] = {
+            metricLabel: document.getElementById('f-lb-label').value.trim(),
+            metricValue: document.getElementById('f-lb-value').value.trim(),
+            progress: parseInt(document.getElementById('f-lb-progress').value) || 0,
+            goal: document.getElementById('f-lb-goal').value.trim()
+        };
+        saveState(); renderLeaderboard(); closeModal();
+        showToast('Leaderboard actualizado');
+    });
+}
+
+function showAddFameClient() { showEditFameForm(null); }
+function showEditFameClient(id) { showEditFameForm(id); }
+
+function showEditFameForm(clientId) {
+    const qd = getQuarterData();
+    const client = clientId ? qd.fameWall.find(c => c.id === clientId) : null;
+    const title = client ? 'Editar Cliente' : 'Nuevo Caso de Éxito';
+    const html = `
+        <div class="form-group">
+            <label>Nombre del Cliente</label>
+            <input type="text" id="f-fc-name" value="${client ? client.name : ''}" placeholder="Ej: Empresa XYZ">
+        </div>
+        <div class="form-group">
+            <label>Iniciales (2-3 letras)</label>
+            <input type="text" id="f-fc-initials" value="${client ? client.initials : ''}" maxlength="3" placeholder="EX" style="width:100px;">
+        </div>
+        <div class="form-group">
+            <label>Meses de Retención</label>
+            <input type="number" id="f-fc-retention" value="${client ? client.retentionMonths : ''}" min="1" placeholder="6">
+        </div>
+        <div class="form-group">
+            <label>ROAS</label>
+            <input type="number" id="f-fc-roas" value="${client ? client.roas : ''}" step="0.1" min="0" placeholder="4.5">
+        </div>
+        <div id="fame-warning"></div>
+        ${client ? `<div style="margin-top:16px"><button class="btn btn-danger" onclick="deleteFameClient('${client.id}')" style="width:100%">Eliminar del Muro</button></div>` : ''}
+    `;
+    openModal(title, html, () => {
+        const name = document.getElementById('f-fc-name').value.trim();
+        const initials = document.getElementById('f-fc-initials').value.trim().toUpperCase();
+        const retention = parseInt(document.getElementById('f-fc-retention').value) || 0;
+        const roas = parseFloat(document.getElementById('f-fc-roas').value) || 0;
+        if (!name || !initials) return;
+        // Validate criteria
+        const warn = document.getElementById('fame-warning');
+        if (retention < 6 || roas < 4) {
+            warn.innerHTML = '<div class="warning-box">Este cliente no cumple los criterios (>6 meses retención & ROAS >4x). ¿Deseas agregarlo de todas formas? Haz clic en Guardar nuevamente.</div>';
+            if (!warn.dataset.confirmed) { warn.dataset.confirmed = '1'; return; }
+        }
+        const obj = {
+            id: client ? client.id : generateId(),
+            name, initials, retentionMonths: retention, roas,
+            addedDate: client ? client.addedDate : new Date().toISOString().split('T')[0]
+        };
+        if (client) {
+            const idx = qd.fameWall.findIndex(c => c.id === client.id);
+            qd.fameWall[idx] = obj;
+        } else {
+            qd.fameWall.push(obj);
+        }
+        saveState(); renderFameWall(); closeModal();
+        showToast(client ? 'Cliente actualizado' : 'Caso de éxito agregado');
+    });
+}
+
+function deleteFameClient(id) {
+    const qd = getQuarterData();
+    qd.fameWall = qd.fameWall.filter(c => c.id !== id);
+    saveState(); renderFameWall(); closeModal();
+    showToast('Cliente eliminado del muro');
+}
+
+function showSettings() {
+    const members = state.settings.teamMembers;
+    const membersHTML = members.map(m => `
+        <div class="member-row">
+            <div class="member-avatar" style="background:${m.color};">${m.avatar}</div>
+            <div class="member-info">
+                <div class="member-name">${m.name}</div>
+                <div class="member-role">${m.role}</div>
+            </div>
+        </div>
+    `).join('');
+    const { url, key } = getSupabaseConfig();
+    const isConnected = syncStatus === 'connected';
+    const html = `
+        <div class="settings-section">
+            <h3>Supabase (Backend Cloud)</h3>
+            <div style="padding:10px 14px;background:var(--bg);border-radius:10px;margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <span class="sync-dot ${syncStatus}" style="width:8px;height:8px;"></span>
+                    <span style="font-size:13px;font-weight:600;">${isConnected ? 'Conectado y sincronizando' : syncStatus === 'error' ? 'Error de conexión' : 'No configurado'}</span>
+                </div>
+                <div style="font-size:12px;color:var(--text-muted);">Conecta Supabase para que los datos se guarden en la nube y puedas acceder desde cualquier dispositivo.</div>
+            </div>
+            <div class="form-group">
+                <label>Supabase URL</label>
+                <input type="text" id="f-sb-url" value="${url}" placeholder="https://xxxx.supabase.co">
+            </div>
+            <div class="form-group">
+                <label>Anon Key</label>
+                <input type="text" id="f-sb-key" value="${key}" placeholder="eyJhbG...">
+            </div>
+            <div class="export-btns">
+                <button class="btn btn-primary" onclick="saveSupabaseConfig()">Conectar</button>
+                ${isConnected ? '<button class="btn btn-cancel" onclick="forceSyncFromCloud()">Forzar sync desde cloud</button>' : ''}
+            </div>
+        </div>
+        <div class="settings-section">
+            <h3>Equipo</h3>
+            ${membersHTML}
+            <button class="add-ms-btn" style="margin-top:10px" onclick="showAddMember()">+ Agregar Miembro</button>
+        </div>
+        <div class="settings-section">
+            <h3>Datos</h3>
+            <div class="export-btns">
+                <button class="btn btn-primary" onclick="exportData()">Exportar JSON</button>
+                <button class="btn btn-cancel" onclick="importData()">Importar JSON</button>
+            </div>
+        </div>
+        <div class="settings-section">
+            <h3>Reset</h3>
+            <button class="btn btn-danger" onclick="resetData()" style="width:100%">Restaurar Datos de Ejemplo</button>
+        </div>
+    `;
+    openModal('Configuración', html, null, { hideButtons: true });
+}
+
+function saveSupabaseConfig() {
+    const url = document.getElementById('f-sb-url').value.trim();
+    const key = document.getElementById('f-sb-key').value.trim();
+    if (!url || !key) {
+        showToast('Ingresa URL y Key de Supabase');
+        return;
+    }
+    setSupabaseConfig(url, key);
+    closeModal();
+    showToast('Conectando con Supabase...');
+    setTimeout(() => {
+        renderHeader();
+        updateSyncUI();
+        if (syncStatus === 'connected') showToast('Conectado a Supabase');
+        else if (syncStatus === 'error') showToast('Error al conectar — verifica URL y Key');
+    }, 2000);
+}
+
+async function forceSyncFromCloud() {
+    showToast('Sincronizando desde la nube...');
+    const success = await loadFromCloud();
+    if (success) showToast('Datos sincronizados desde la nube');
+    else showToast('Error al sincronizar');
+}
+
+function showAddMember() {
+    const html = `
+        <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" id="f-mem-name" placeholder="Ej: María">
+        </div>
+        <div class="form-group">
+            <label>Rol</label>
+            <input type="text" id="f-mem-role" placeholder="Ej: Diseño / UX">
+        </div>
+        <div class="form-group">
+            <label>Inicial (1 letra)</label>
+            <input type="text" id="f-mem-avatar" maxlength="1" style="width:60px;" placeholder="M">
+        </div>
+        <div class="form-group">
+            <label>Color</label>
+            <input type="color" id="f-mem-color" value="#2979ff" style="width:60px; height:40px; padding:2px;">
+        </div>
+    `;
+    openModal('Nuevo Miembro', html, () => {
+        const name = document.getElementById('f-mem-name').value.trim();
+        if (!name) return;
+        state.settings.teamMembers.push({
+            id: name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-'),
+            name,
+            role: document.getElementById('f-mem-role').value.trim(),
+            avatar: (document.getElementById('f-mem-avatar').value.trim() || name[0]).toUpperCase(),
+            color: document.getElementById('f-mem-color').value
+        });
+        saveState(); renderAll(); closeModal();
+        showToast('Miembro agregado');
+    });
+}
+
+function exportData() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'eos-dashboard-backup.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Datos exportados');
+}
+
+function importData() {
+    document.getElementById('import-file').click();
+}
+
+document.getElementById('import-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const imported = JSON.parse(ev.target.result);
+            if (imported.version && imported.quarters) {
+                state = imported;
+                saveState(); renderAll(); closeModal();
+                showToast('Datos importados correctamente');
+            } else {
+                showToast('Archivo no válido');
+            }
+        } catch { showToast('Error al leer archivo'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+});
+
+function resetData() {
+    if (!confirm('¿Estás seguro? Se borrarán todos los datos y se restaurarán los de ejemplo.')) return;
+    localStorage.removeItem('eos_dashboard');
+    loadState();
+    renderAll();
+    closeModal();
+    showToast('Datos restaurados');
+}
+
+// =====================================================================
+// ===== BUSINESS LOGIC =====
+// =====================================================================
+function calculateLeaderboard() {
+    const qd = getQuarterData();
+    const members = state.settings.teamMembers;
+    const ranked = members.map(member => {
+        const lb = qd.leaderboard[member.id] || {};
+        // Scorecard hit rate
+        const memberMetrics = qd.scorecard.metrics.filter(m => m.ownerId === member.id);
+        let totalHits = 0, totalEntries = 0;
+        memberMetrics.forEach(m => {
+            for (let w = 1; w <= 13; w++) {
+                const wd = qd.scorecard.weeks[w] && qd.scorecard.weeks[w][m.id];
+                if (wd) { totalEntries++; if (wd.good) totalHits++; }
+            }
+        });
+        const hitRate = totalEntries > 0 ? totalHits / totalEntries : 0;
+        // Rock progress
+        const memberRocks = qd.rocks.filter(r => r.ownerId === member.id);
+        const avgRockProgress = memberRocks.length > 0
+            ? memberRocks.reduce((sum, r) => sum + r.progress, 0) / memberRocks.length : 0;
+        // Composite
+        const compositeScore = (hitRate * 60) + (avgRockProgress * 0.4);
+        const bonusStatus = (hitRate >= 0.8 && avgRockProgress >= 70) ? 'secured' : 'at-risk';
+        return { ...member, ...lb, hitRate, avgRockProgress, compositeScore, bonusStatus };
+    });
+    ranked.sort((a, b) => b.compositeScore - a.compositeScore);
+    ranked.forEach((m, i) => m.rank = i + 1);
+    return ranked;
+}
+
+function calculateRocksSummary() {
+    const qd = getQuarterData();
+    const onTrack = qd.rocks.filter(r => r.status === 'on-track').length;
+    const offTrack = qd.rocks.filter(r => r.status === 'off-track').length;
+    return { onTrack, offTrack, total: qd.rocks.length };
+}
+
+// =====================================================================
+// ===== RENDER: HEADER =====
+// =====================================================================
+function renderHeader() {
+    const info = getCurrentQuarterInfo();
+    const displayWeek = getDisplayWeek();
+    document.getElementById('header').innerHTML = `
+        <div class="header-left">
+            <h1>Dashboard EOS</h1>
+            <div class="date">Actualizado: ${getHeaderDate()}</div>
+        </div>
+        <div class="header-nav">
+            <div class="nav-group">
+                <label>Trimestre</label>
+                <button class="nav-btn" onclick="navQuarter(-1)">&larr;</button>
+                <div class="nav-current">Q${state.currentQuarter} ${state.currentYear}</div>
+                <button class="nav-btn" onclick="navQuarter(1)">&rarr;</button>
+            </div>
+            <div class="nav-group">
+                <label>Semana</label>
+                <button class="nav-btn" onclick="navWeek(-1)">&larr;</button>
+                <div class="nav-current">S${displayWeek}</div>
+                <button class="nav-btn" onclick="navWeek(1)">&rarr;</button>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="sync-indicator" id="sync-status">
+                <span class="sync-dot offline"></span> Solo local
+            </div>
+            <button class="icon-btn" onclick="showSettings()" title="Configuración">&#9881;</button>
+        </div>
+    `;
+}
+
+function navQuarter(delta) {
+    state.currentQuarter += delta;
+    if (state.currentQuarter > 4) { state.currentQuarter = 1; state.currentYear++; }
+    if (state.currentQuarter < 1) { state.currentQuarter = 4; state.currentYear--; }
+    state.currentWeek = null;
+    saveState(); renderAll();
+}
+
+function navWeek(delta) {
+    let w = getDisplayWeek() + delta;
+    if (w < 1) w = 1;
+    if (w > 13) w = 13;
+    state.currentWeek = w;
+    saveState(); renderHeader(); renderScorecard();
+}
+
+// =====================================================================
+// ===== RENDER: PULSO =====
+// =====================================================================
+function renderPulso() {
+    const qd = getQuarterData();
+    const rev = qd.pulso.revenueMonthly;
+    const util = qd.pulso.utilityQuarterly;
+    const revPct = rev.goal > 0 ? Math.min(100, (rev.current / rev.goal * 100)).toFixed(1) : 0;
+    const utilPct = util.goal > 0 ? Math.min(100, (util.current / util.goal * 100)).toFixed(1) : 0;
+    const rocks = calculateRocksSummary();
+    const rocksCards = qd.rocks.map(r => {
+        const member = getMember(r.ownerId);
+        const msHTML = (r.milestones || []).map(ms =>
+            `<div class="milestone ${ms.done ? 'done' : ''}">${ms.done ? '&#10003;' : '&#9675;'} ${ms.text}</div>`
+        ).join('');
+        return `
+        <div class="rock-card editable ${r.status}" onclick="showEditRock('${r.id}')">
+            <span class="edit-icon">&#9998;</span>
+            <div class="rock-name">${r.name}</div>
+            <div class="rock-owner">Dueño: ${member ? member.name : r.ownerId}</div>
+            <div class="rock-progress-row">
+                <div class="progress-bar" style="flex:1;">
+                    <div class="progress-fill" style="width:${r.progress}%; background:${r.status === 'on-track' ? 'var(--gradient-green)' : 'var(--gradient-red)'};"></div>
+                </div>
+                <span class="rock-progress-pct" style="color:${r.status === 'on-track' ? 'var(--green)' : 'var(--red)'};">${r.progress}%</span>
+            </div>
+            ${r.deadline ? `<div class="rock-deadline">Fecha límite: ${formatDate(r.deadline)}</div>` : ''}
+            <div class="status-badge ${r.status}">
+                <span class="status-dot ${r.status === 'on-track' ? 'green' : 'red'}"></span>
+                ${r.status === 'on-track' ? 'On Track' : 'Off Track'}
+            </div>
+            ${msHTML ? `<div class="milestones">${msHTML}</div>` : ''}
+        </div>`;
+    }).join('');
+
+    const rocksSegments = qd.rocks.length > 0
+        ? qd.rocks.map(r => `<div style="flex:1;height:6px;border-radius:3px;background:${r.status === 'on-track' ? 'var(--green)' : 'var(--red)'};"></div>`).join('')
+        : '<div style="flex:1;height:6px;border-radius:3px;background:var(--border);"></div>';
+
+    document.getElementById('section-pulso').innerHTML = `
+        <div class="section-header">
+            <div class="section-title"><span class="dot"></span> El Pulso de la Empresa</div>
+        </div>
+        <div class="pulso-grid">
+            <div class="pulso-card editable" onclick="showEditPulso('revenue')">
+                <span class="edit-icon">&#9998;</span>
+                <div class="label">Facturación Mensual</div>
+                <div class="value-row">
+                    <span class="value" style="color:var(--green);">${formatCurrency(rev.current)}</span>
+                    <span class="meta">/ ${formatCurrency(rev.goal)}</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width:${revPct}%;background:var(--gradient-green);"></div></div>
+                <div class="progress-info">
+                    <span>${revPct}% de la meta</span>
+                    <span>Faltan ${formatCurrency(Math.max(0, rev.goal - rev.current))}</span>
+                </div>
+            </div>
+            <div class="pulso-card editable" onclick="showEditPulso('utility')">
+                <span class="edit-icon">&#9998;</span>
+                <div class="label">Utilidad Bruta Trimestral</div>
+                <div class="value-row">
+                    <span class="value" style="color:var(--blue);">${formatCurrency(util.current)}</span>
+                    <span class="meta">/ ${formatCurrency(util.goal)}</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width:${utilPct}%;background:var(--gradient-blue);"></div></div>
+                <div class="progress-info">
+                    <span>${utilPct}% de la meta</span>
+                    <span>Faltan ${formatCurrency(Math.max(0, util.goal - util.current))}</span>
+                </div>
+            </div>
+            <div class="pulso-card">
+                <div class="label">Estado de los Rocks Q${state.currentQuarter}</div>
+                <div class="value-row">
+                    <span class="value" style="color:var(--green);">${rocks.onTrack}</span>
+                    <span class="meta" style="color:var(--green);">On Track</span>
+                    <span style="margin:0 4px;color:var(--text-muted);">/</span>
+                    <span class="value" style="color:var(--red);">${rocks.offTrack}</span>
+                    <span class="meta" style="color:var(--red);">Off Track</span>
+                </div>
+                <div style="display:flex;gap:6px;margin-top:4px;">${rocksSegments}</div>
+            </div>
+        </div>
+        <div class="section-header" style="margin-top:16px;">
+            <div class="section-title" style="font-size:14px;">Rocks del Trimestre</div>
+            <button class="add-btn" onclick="showAddRock()">+ Rock</button>
+        </div>
+        ${qd.rocks.length > 0
+            ? `<div class="rocks-grid">${rocksCards}</div>`
+            : `<div class="empty-state"><div class="empty-icon">&#9968;</div><p>No hay rocks para este trimestre</p><button class="add-btn" onclick="showAddRock()">+ Crear Rock</button></div>`
+        }
+    `;
+}
+
+// =====================================================================
+// ===== RENDER: SCORECARD =====
+// =====================================================================
+function renderScorecard() {
+    const qd = getQuarterData();
+    const metrics = qd.scorecard.metrics;
+    const weeks = qd.scorecard.weeks;
+    const currentWeek = getDisplayWeek();
+
+    if (metrics.length === 0) {
+        document.getElementById('section-scorecard').innerHTML = `
+            <div class="section-header">
+                <div class="section-title"><span class="dot" style="background:var(--blue);"></span> Scorecard del Equipo</div>
+                <button class="add-btn" onclick="showEditScorecardMetric(null)">+ Métrica</button>
+            </div>
+            <div class="empty-state"><div class="empty-icon">&#9776;</div><p>No hay métricas configuradas</p><button class="add-btn" onclick="showEditScorecardMetric(null)">+ Crear Métrica</button></div>
+        `;
+        return;
+    }
+
+    let headerHTML = '<tr><th class="sticky col-num">#</th><th class="sticky col-metric">Métrica</th><th class="sticky col-owner">Dueño</th><th class="sticky col-goal">Meta</th>';
+    for (let w = 1; w <= 13; w++) {
+        headerHTML += `<th class="col-week ${w === currentWeek ? 'current-week' : ''}">S${w}</th>`;
+    }
+    headerHTML += '<th class="col-total">Total</th></tr>';
+
+    let bodyHTML = '';
+    metrics.forEach((m, i) => {
+        let hits = 0, total = 0;
+        let weekCells = '';
+        for (let w = 1; w <= 13; w++) {
+            const wd = weeks[w] && weeks[w][m.id];
+            const isCurrent = w === currentWeek;
+            if (wd) {
+                total++;
+                if (wd.good) hits++;
+                weekCells += `<td class="week-cell ${wd.good ? 'hit' : 'miss'} ${isCurrent ? 'current-week-col' : ''}" onclick="showEditWeekResult('${m.id}', ${w})" title="S${w}: ${wd.result}">&bull;</td>`;
+            } else {
+                weekCells += `<td class="week-cell empty ${isCurrent ? 'current-week-col' : ''}" onclick="showEditWeekResult('${m.id}', ${w})" title="S${w}: Sin dato">&mdash;</td>`;
+            }
+        }
+        const totalColor = total > 0 ? (hits / total >= 0.7 ? 'var(--green)' : 'var(--red)') : 'var(--text-muted)';
+        bodyHTML += `<tr>
+            <td class="sticky col-num">${i + 1}</td>
+            <td class="sticky col-metric"><span class="metric-name-link" onclick="showEditScorecardMetric('${m.id}')">${m.metric}</span></td>
+            <td class="sticky col-owner">${getMemberName(m.ownerId)}</td>
+            <td class="sticky col-goal">${m.goal}</td>
+            ${weekCells}
+            <td class="total-cell" style="color:${totalColor};">${total > 0 ? `${hits}/${total}` : '—'}</td>
+        </tr>`;
+    });
+
+    document.getElementById('section-scorecard').innerHTML = `
+        <div class="section-header">
+            <div class="section-title"><span class="dot" style="background:var(--blue);"></span> Scorecard del Equipo — Q${state.currentQuarter} ${state.currentYear}</div>
+            <button class="add-btn" onclick="showEditScorecardMetric(null)">+ Métrica</button>
+        </div>
+        <div class="table-wrapper">
+            <table class="scorecard-table">
+                <thead>${headerHTML}</thead>
+                <tbody>${bodyHTML}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+// =====================================================================
+// ===== RENDER: LEADERBOARD =====
+// =====================================================================
+function renderLeaderboard() {
+    const ranked = calculateLeaderboard();
+    if (ranked.length === 0) {
+        document.getElementById('section-leaderboard').innerHTML = `
+            <div class="section-header">
+                <div class="section-title"><span class="dot" style="background:var(--purple);"></span> Leaderboard de Rendimiento Individual</div>
+            </div>
+            <div class="empty-state"><div class="empty-icon">&#128101;</div><p>No hay miembros del equipo</p></div>
+        `;
+        return;
+    }
+
+    const cards = ranked.map(m => {
+        const progressColor = m.bonusStatus === 'secured' ? 'var(--gradient-green)' : 'var(--gradient-red)';
+        const hitPct = (m.hitRate * 100).toFixed(0);
+        return `
+        <div class="team-card editable" onclick="showEditLeaderboardMember('${m.id}')">
+            <span class="edit-icon">&#9998;</span>
+            <div class="rank ${m.rank === 1 ? 'first' : ''}">#${m.rank}</div>
+            <div class="avatar" style="background:${m.color};">${m.avatar}</div>
+            <div class="name">${m.name}</div>
+            <div class="role">${m.role}</div>
+            <div class="metric-label">${m.metricLabel || 'Sin métrica configurada'}</div>
+            <div class="metric-value">${m.metricValue || '—'}</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:${m.progress || 0}%;background:${progressColor};"></div>
+            </div>
+            <div class="progress-info">
+                <span>Scorecard: ${hitPct}% hits</span>
+                <span>Meta: ${m.goal || '—'}</span>
+            </div>
+            <div class="bonus-badge ${m.bonusStatus}">
+                ${m.bonusStatus === 'secured' ? '&#10003; Bono Asegurado' : '&#9888; En Riesgo'}
+            </div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('section-leaderboard').innerHTML = `
+        <div class="section-header">
+            <div class="section-title"><span class="dot" style="background:var(--purple);"></span> Leaderboard de Rendimiento Individual</div>
+        </div>
+        <div class="leaderboard-grid">${cards}</div>
+    `;
+}
+
+// =====================================================================
+// ===== RENDER: FAME WALL =====
+// =====================================================================
+function renderFameWall() {
+    const qd = getQuarterData();
+    const clients = qd.fameWall;
+    const bonusCount = clients.length;
+    const bonusTotal = bonusCount * 500;
+
+    const cards = clients.map(c => {
+        const isNew = isNewEntry(c.addedDate);
+        return `
+        <div class="fame-card editable ${isNew ? 'new-entry' : ''}" onclick="showEditFameClient('${c.id}')">
+            ${isNew ? '<span class="new-tag">NUEVO</span>' : ''}
+            <span class="edit-icon" style="${isNew ? 'top:30px;' : ''}">&#9998;</span>
+            <div class="fame-logo">${c.initials}</div>
+            <div class="client-name">${c.name}</div>
+            <div class="fame-metrics">
+                <div class="fame-metric">
+                    <div class="fm-value">${c.retentionMonths}m</div>
+                    <div class="fm-label">Retención</div>
+                </div>
+                <div class="fame-metric">
+                    <div class="fm-value">${c.roas}x</div>
+                    <div class="fm-label">ROAS</div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('section-fame').innerHTML = `
+        <div class="fame-header">
+            <div class="section-title" style="margin-bottom:0;">
+                <span class="dot" style="background:var(--gold);"></span>
+                Muro de la Fama — Casos de Éxito
+            </div>
+            <div class="fame-stats">
+                <div class="fame-bonus">Bonos acumulados: ${formatCurrency(bonusTotal)} (${bonusCount} casos)</div>
+                <button class="add-btn" onclick="showAddFameClient()">+ Cliente</button>
+            </div>
+        </div>
+        <div class="fame-criteria">Criterio: >6 meses de retención & ROAS > 4x &bull; Bono por caso: $500 repartido en equipo</div>
+        ${clients.length > 0
+            ? `<div class="fame-grid">${cards}</div>`
+            : `<div class="empty-state"><div class="empty-icon">&#127942;</div><p>Aún no hay casos de éxito</p><button class="add-btn" onclick="showAddFameClient()">+ Agregar Cliente</button></div>`
+        }
+    `;
+}
+
+// =====================================================================
+// ===== SETUP BANNER =====
+// =====================================================================
+function renderSetupBanner() {
+    const banner = document.getElementById('setup-banner');
+    const { url, key } = getSupabaseConfig();
+    const dismissed = localStorage.getItem('eos_setup_dismissed');
+    if ((url && key) || dismissed) {
+        banner.innerHTML = '';
+        return;
+    }
+    banner.innerHTML = `
+        <div class="setup-banner">
+            <div class="setup-text">
+                <div class="setup-title">Conecta Supabase para sincronizar en la nube</div>
+                <div class="setup-desc">Tus datos se guardan localmente. Conecta Supabase para acceder desde cualquier dispositivo y no perder datos si limpias el navegador.</div>
+            </div>
+            <button class="btn btn-primary" onclick="showSettings()">Configurar</button>
+            <button class="dismiss-btn" onclick="dismissSetup()" title="Cerrar">&times;</button>
+        </div>
+    `;
+}
+
+function dismissSetup() {
+    localStorage.setItem('eos_setup_dismissed', '1');
+    document.getElementById('setup-banner').innerHTML = '';
+}
+
+// =====================================================================
+// ===== RENDER ALL =====
+// =====================================================================
+function renderAll() {
+    renderHeader();
+    renderSetupBanner();
+    renderPulso();
+    renderScorecard();
+    renderLeaderboard();
+    renderFameWall();
+    updateSyncUI();
+}
+
+// =====================================================================
+// ===== MULTI-TAB SYNC =====
+// =====================================================================
+window.addEventListener('storage', (e) => {
+    if (e.key === 'eos_dashboard') {
+        loadState();
+        renderAll();
+    }
+});
+
+// =====================================================================
+// ===== INIT =====
+// =====================================================================
+loadState();
+// Auto-set current quarter/week if this is first load
+const autoInfo = getCurrentQuarterInfo();
+if (!state.currentWeek) {
+    state.currentYear = autoInfo.year;
+    state.currentQuarter = autoInfo.quarter;
+}
+renderAll();
+// Auto-configure Supabase if not already set
+if (!localStorage.getItem('eos_supabase_url')) {
+    localStorage.setItem('eos_supabase_url', 'https://zdxdvljrhtpmkuxwlwrm.supabase.co');
+    localStorage.setItem('eos_supabase_key', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkeGR2bGpyaHRwbWt1eHdsd3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzc4MzUsImV4cCI6MjA4OTk1MzgzNX0.VSWZ862E0QqkXOzAPjJLANs_1y55KP0K3ErLj5Zae44');
+}
+initSupabase();
+</script>
+</body>
+</html>
