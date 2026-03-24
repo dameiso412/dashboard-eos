@@ -492,16 +492,6 @@
 <input type="file" id="import-file" accept=".json" style="display:none">
 
 <script>
-// Load Supabase client asynchronously (non-blocking)
-(function() {
-    var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-    s.onload = function() { if (typeof initSupabase === 'function') initSupabase(); };
-    document.head.appendChild(s);
-})();
-</script>
-
-<script>
 // =====================================================================
 // ===== DEFAULT STATE =====
 // =====================================================================
@@ -1886,11 +1876,25 @@ if (!state.currentWeek) {
     state.currentQuarter = autoInfo.quarter;
 }
 renderAll();
-// Auto-configure Supabase credentials (Supabase client loads async, calls initSupabase on load)
+// Auto-configure Supabase credentials
 if (!localStorage.getItem('eos_supabase_url')) {
     localStorage.setItem('eos_supabase_url', 'https://zdxdvljrhtpmkuxwlwrm.supabase.co');
     localStorage.setItem('eos_supabase_key', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkeGR2bGpyaHRwbWt1eHdsd3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzc4MzUsImV4cCI6MjA4OTk1MzgzNX0.VSWZ862E0QqkXOzAPjJLANs_1y55KP0K3ErLj5Zae44');
 }
+// Load Supabase after dashboard renders
+fetch('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js')
+    .then(function(r) { return r.text(); })
+    .then(function(code) {
+        // UMD assigns to var supabase, we need it on window
+        var fn = new Function(code + '\nreturn supabase;');
+        window.supabase = fn();
+        initSupabase();
+    })
+    .catch(function(e) {
+        console.log('Supabase CDN failed:', e.message);
+        syncStatus = 'offline';
+        updateSyncUI();
+    });
 </script>
 </body>
 </html>
