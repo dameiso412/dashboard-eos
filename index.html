@@ -1126,6 +1126,7 @@ function showEditPulso(type) {
         data.goal = parseFloat(document.getElementById('f-goal').value) || 1;
         saveState(); renderPulso(); closeModal();
         showToast('Valores actualizados');
+        notifyPulso(type, data.current, data.goal);
     });
 }
 
@@ -1201,6 +1202,7 @@ function showEditRockForm(rockId) {
             deadline: document.getElementById('f-rock-deadline').value,
             milestones: ms
         };
+        const wasComplete = rock ? rock.progress === 100 : false;
         if (rock) {
             const idx = qd.rocks.findIndex(r => r.id === rock.id);
             qd.rocks[idx] = obj;
@@ -1209,6 +1211,9 @@ function showEditRockForm(rockId) {
         }
         saveState(); renderPulso(); closeModal();
         showToast(rock ? 'Rock actualizado' : 'Rock creado');
+        const ownerName = getMemberName(obj.ownerId);
+        notifyRockUpdate(obj.name, ownerName, obj.progress, obj.status);
+        if (obj.progress === 100 && !wasComplete) notifyRockComplete(obj.name, ownerName);
     });
 }
 
@@ -1324,12 +1329,11 @@ function showEditWeekResult(metricId, week) {
         const result = document.getElementById('f-wr-result').value.trim();
         if (!result) return;
         if (!qd.scorecard.weeks[week]) qd.scorecard.weeks[week] = {};
-        qd.scorecard.weeks[week][metricId] = {
-            result,
-            good: document.getElementById('f-wr-status').value === 'true'
-        };
+        const good = document.getElementById('f-wr-status').value === 'true';
+        qd.scorecard.weeks[week][metricId] = { result, good };
         saveState(); renderScorecard(); closeModal();
         showToast('Resultado guardado');
+        notifyScorecard(metric.metric, week, result, good, getMemberName(metric.ownerId));
     });
 }
 
@@ -1439,6 +1443,7 @@ function showEditFameForm(clientId) {
         }
         saveState(); renderFameWall(); closeModal();
         showToast(client ? 'Cliente actualizado' : 'Caso de éxito agregado');
+        if (!client) notifyFameWall(obj.name, obj.retentionMonths, obj.roas);
     });
 }
 
@@ -1870,6 +1875,113 @@ function equipReward(memberId, type, value) {
         ? REWARDS.skins.find(s => s.id === value)
         : REWARDS.titles.find(t => t.id === value);
     showToast(`${reward.icon} ${reward.name} equipado`);
+    const memberName = getMemberName(memberId);
+    notifyRewardUnlock(memberName, type, reward.name, reward.icon);
+}
+
+// =====================================================================
+// ===== SLACK NOTIFICATIONS =====
+// =====================================================================
+const SLACK_ENDPOINT = 'https://zdxdvljrhtpmkuxwlwrm.supabase.co/functions/v1/slack-notify';
+
+function slackNotify(text) {
+    fetch(SLACK_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+    }).catch(e => console.log('Slack notify error:', e));
+}
+
+// Called after saving scorecard results
+function notifyScorecard(metricName, week, result, good, ownerName) {
+    const emoji = good ? '✅' : '❌';
+    slackNotify(`${emoji} *Scorecard S${week}* — _${metricName}_\nResultado: *${result}* ${good ? '(Hit)' : '(Miss)'}\nDueño: ${ownerName}`);
+}
+
+// Called after rock updates
+function notifyRockUpdate(rockName, ownerName, progress, status) {
+    const emoji = status === 'on-track' ? '🟢' : '🔴';
+    const bar = '█'.repeat(Math.floor(progress/10)) + '░'.repeat(10 - Math.floor(progress/10));
+    slackNotify(`🏔️ *Rock Update* — _${rockName}_\n${emoji} ${status === 'on-track' ? 'On Track' : 'Off Track'} | ${bar} ${progress}%\nDueño: ${ownerName}`);
+}
+
+// Called when rock completes
+function notifyRockComplete(rockName, ownerName) {
+    slackNotify(`🎉🏔️ *¡Rock Completado!* — _${rockName}_\n${ownerName} acaba de completar este Rock al 100%. ¡Felicidades! 🎊`);
+}
+
+// Called when someone unlocks a reward
+function notifyRewardUnlock(memberName, rewardType, rewardName, rewardIcon) {
+    const type = rewardType === 'skin' ? 'Skin' : 'Título';
+    slackNotify(`🎮 *¡${type} Desbloqueado!*\n${memberName} acaba de equiparse ${rewardIcon} *${rewardName}*`);
+}
+
+// Called when someone's bonus status changes
+function notifyBonusChange(memberName, newStatus) {
+    if (newStatus === 'secured') {
+        slackNotify(`💰 *¡Bono Asegurado!*\n${memberName} ya tiene su bono asegurado este trimestre. 🎯`);
+    } else {
+        slackNotify(`⚠️ *Bono en Riesgo*\n${memberName} tiene su bono en riesgo. ¡A darle con todo! 💪`);
+    }
+}
+
+// Called when fame wall client is added
+function notifyFameWall(clientName, retentionMonths, roas) {
+    slackNotify(`🏆 *¡Nuevo Caso de Éxito!* — _${clientName}_\n📅 ${retentionMonths} meses de retención | 📈 ROAS ${roas}x\n💰 ¡$500 de bono para todo el equipo! 🎉`);
+}
+
+// Called when pulso is updated
+function notifyPulso(type, current, goal) {
+    const pct = (current / goal * 100).toFixed(1);
+    const label = type === 'revenue' ? 'Facturación Mensual' : 'Utilidad Bruta Trimestral';
+    const bar = '█'.repeat(Math.floor(pct/10)) + '░'.repeat(10 - Math.floor(pct/10));
+    let emoji = pct >= 90 ? '🔥' : pct >= 70 ? '📊' : pct >= 50 ? '⚠️' : '🚨';
+    slackNotify(`${emoji} *${label} Actualizada*\n${bar} *${pct}%* ($${current.toLocaleString()} / $${goal.toLocaleString()})\n${pct >= 100 ? '🎉 ¡Meta cumplida!' : `Faltan $${(goal - current).toLocaleString()}`}`);
+}
+
+// Weekly summary — call manually or on schedule
+function sendWeeklySummary() {
+    const qd = getQuarterData();
+    const week = getDisplayWeek();
+    const members = state.settings.teamMembers;
+    const mvp = getWeeklyMVP();
+
+    // Scorecard summary
+    let totalHits = 0, totalEntries = 0;
+    qd.scorecard.metrics.forEach(m => {
+        const wd = qd.scorecard.weeks[week] && qd.scorecard.weeks[week][m.id];
+        if (wd) { totalEntries++; if (wd.good) totalHits++; }
+    });
+
+    // Rocks summary
+    const onTrack = qd.rocks.filter(r => r.status === 'on-track').length;
+    const offTrack = qd.rocks.filter(r => r.status === 'off-track').length;
+
+    // Revenue
+    const rev = qd.pulso.revenueMonthly;
+    const revPct = rev.goal > 0 ? (rev.current / rev.goal * 100).toFixed(0) : 0;
+
+    let msg = `📋 *Resumen Semanal — S${week} Q${state.currentQuarter} ${state.currentYear}*\n\n`;
+    msg += `📊 *Scorecard:* ${totalHits}/${totalEntries} métricas cumplidas (${totalEntries > 0 ? ((totalHits/totalEntries)*100).toFixed(0) : 0}%)\n`;
+    msg += `🏔️ *Rocks:* ${onTrack} On Track / ${offTrack} Off Track\n`;
+    msg += `💰 *Facturación:* $${rev.current.toLocaleString()} / $${rev.goal.toLocaleString()} (${revPct}%)\n`;
+
+    if (mvp) {
+        msg += `\n🏆 *MVP de la Semana:* ${mvp.name} — ${mvp.hits}/${mvp.total} hits (${(mvp.hitRate*100).toFixed(0)}%)`;
+    }
+
+    // Leaderboard
+    const ranked = calculateLeaderboard();
+    msg += '\n\n*Leaderboard:*\n';
+    ranked.forEach(m => {
+        const xp = calculateXP(m.id);
+        const lvl = getLevel(xp);
+        msg += `${m.rank === 1 ? '🥇' : m.rank === 2 ? '🥈' : m.rank === 3 ? '🥉' : '#' + m.rank} ${m.name} — ${lvl.title} (${xp} XP) | ${m.bonusStatus === 'secured' ? '✅ Bono' : '⚠️ En riesgo'}\n`;
+    });
+
+    msg += `\n_Dashboard:_ https://dashboard-eos.netlify.app`;
+    slackNotify(msg);
+    showToast('Resumen semanal enviado a Slack');
 }
 
 // =====================================================================
@@ -2020,6 +2132,7 @@ function renderHeader() {
             <div class="sync-indicator" id="sync-status">
                 <span class="sync-dot offline"></span> Solo local
             </div>
+            <button class="icon-btn" onclick="sendWeeklySummary()" title="Enviar Resumen Semanal a Slack" style="font-size:14px;">📋</button>
             <button class="icon-btn" onclick="showSettings()" title="Configuración">&#9881;</button>
         </div>
     `;
