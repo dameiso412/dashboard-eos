@@ -151,6 +151,28 @@
             font-size: 12px; color: var(--text-muted);
         }
 
+        /* ===== HIDDEN CARDS ===== */
+        .pulso-card .visibility-btn {
+            position: absolute; top: 10px; right: 10px;
+            background: none; border: none; cursor: pointer;
+            font-size: 16px; opacity: 0; transition: opacity .2s;
+            padding: 4px; border-radius: 6px; color: var(--text-muted);
+        }
+        .pulso-card { position: relative; }
+        .pulso-card:hover .visibility-btn { opacity: 1; }
+        .pulso-card.hidden-card .card-content {
+            filter: blur(12px); pointer-events: none; user-select: none;
+        }
+        .pulso-card.hidden-card .hidden-overlay {
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 2;
+            border-radius: 16px; cursor: pointer;
+        }
+        .pulso-card.hidden-card .hidden-overlay span {
+            font-size: 13px; color: var(--text-muted); margin-top: 4px;
+        }
+        .pulso-card.hidden-card .visibility-btn { opacity: 1; z-index: 3; }
+
         /* ===== ROCKS ===== */
         .rocks-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 12px; }
         .rock-card {
@@ -1061,6 +1083,73 @@ function showToast(msg) {
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// =====================================================================
+// ===== ADMIN MODE + CARD VISIBILITY =====
+// =====================================================================
+function isAdmin() {
+    return localStorage.getItem('eos_admin_unlocked') === 'true';
+}
+function getHiddenCards() {
+    try { return JSON.parse(localStorage.getItem('eos_hidden_cards') || '{}'); }
+    catch { return {}; }
+}
+function isCardHidden(cardId) {
+    return !!getHiddenCards()[cardId];
+}
+function toggleCardVisibility(cardId, event) {
+    if (event) event.stopPropagation();
+    if (!isAdmin()) { promptAdminPin(); return; }
+    const hidden = getHiddenCards();
+    hidden[cardId] = !hidden[cardId];
+    localStorage.setItem('eos_hidden_cards', JSON.stringify(hidden));
+    renderPulso();
+    showToast(hidden[cardId] ? 'Tarjeta oculta para el equipo' : 'Tarjeta visible para todos');
+}
+function promptAdminPin() {
+    const storedPin = localStorage.getItem('eos_admin_pin');
+    if (!storedPin) {
+        // First time: set pin
+        openModal('Crear PIN de Admin', `
+            <div class="form-group">
+                <label>Crea un PIN de 4 dígitos para proteger las tarjetas sensibles</label>
+                <input type="password" id="f-new-pin" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="1234" style="width:120px;text-align:center;font-size:24px;letter-spacing:8px;">
+            </div>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">Solo tú tendrás este PIN. Se guarda en este dispositivo.</p>
+        `, () => {
+            const pin = document.getElementById('f-new-pin').value;
+            if (pin.length !== 4) { showToast('El PIN debe ser de 4 dígitos'); return; }
+            localStorage.setItem('eos_admin_pin', pin);
+            localStorage.setItem('eos_admin_unlocked', 'true');
+            closeModal();
+            showToast('PIN creado. Modo admin activado.');
+            renderPulso();
+        });
+        return;
+    }
+    // Pin exists: ask for it
+    openModal('Modo Admin', `
+        <div class="form-group">
+            <label>Ingresa tu PIN para ver/ocultar tarjetas</label>
+            <input type="password" id="f-admin-pin" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="••••" style="width:120px;text-align:center;font-size:24px;letter-spacing:8px;">
+        </div>
+    `, () => {
+        const pin = document.getElementById('f-admin-pin').value;
+        if (pin === localStorage.getItem('eos_admin_pin')) {
+            localStorage.setItem('eos_admin_unlocked', 'true');
+            closeModal();
+            showToast('Modo admin activado');
+            renderAll();
+        } else {
+            showToast('PIN incorrecto');
+        }
+    });
+}
+function lockAdmin() {
+    localStorage.setItem('eos_admin_unlocked', 'false');
+    renderAll();
+    showToast('Modo admin bloqueado');
 }
 
 // =====================================================================
@@ -2133,6 +2222,9 @@ function renderHeader() {
                 <span class="sync-dot offline"></span> Solo local
             </div>
             <button class="icon-btn" onclick="sendWeeklySummary()" title="Enviar Resumen Semanal a Slack" style="font-size:14px;">📋</button>
+            ${isAdmin()
+                ? '<button class="icon-btn" onclick="lockAdmin()" title="Bloquear modo admin" style="font-size:14px;">🔓</button>'
+                : '<button class="icon-btn" onclick="promptAdminPin()" title="Modo admin" style="font-size:14px;">🔒</button>'}
             <button class="icon-btn" onclick="showSettings()" title="Configuración">&#9881;</button>
         </div>
     `;
@@ -2198,8 +2290,11 @@ function renderPulso() {
             <div class="section-title"><span class="dot"></span> El Pulso de la Empresa</div>
         </div>
         <div class="pulso-grid">
-            <div class="pulso-card editable" onclick="showEditPulso('revenue')">
-                <span class="edit-icon">&#9998;</span>
+            ${isCardHidden('revenue') && !isAdmin() ? '' : `
+            <div class="pulso-card editable ${isCardHidden('revenue') ? 'hidden-card' : ''}" onclick="${isCardHidden('revenue') ? '' : "showEditPulso('revenue')"}">
+                ${isAdmin() ? `<button class="visibility-btn" onclick="toggleCardVisibility('revenue', event)" title="${isCardHidden('revenue') ? 'Mostrar al equipo' : 'Ocultar al equipo'}">${isCardHidden('revenue') ? '🔒' : '👁'}</button>` : '<span class="edit-icon">&#9998;</span>'}
+                ${isCardHidden('revenue') ? '<div class="hidden-overlay"><span>🔒 Solo Admin</span></div>' : ''}
+                <div class="card-content">
                 <div class="label">Facturación Mensual</div>
                 <div class="value-row">
                     <span class="value" style="color:var(--green);">${formatCurrency(rev.current)}</span>
@@ -2210,9 +2305,13 @@ function renderPulso() {
                     <span>${revPct}% de la meta</span>
                     <span>Faltan ${formatCurrency(Math.max(0, rev.goal - rev.current))}</span>
                 </div>
-            </div>
-            <div class="pulso-card editable" onclick="showEditPulso('utility')">
-                <span class="edit-icon">&#9998;</span>
+                </div>
+            </div>`}
+            ${isCardHidden('utility') && !isAdmin() ? '' : `
+            <div class="pulso-card editable ${isCardHidden('utility') ? 'hidden-card' : ''}" onclick="${isCardHidden('utility') ? '' : "showEditPulso('utility')"}">
+                ${isAdmin() ? `<button class="visibility-btn" onclick="toggleCardVisibility('utility', event)" title="${isCardHidden('utility') ? 'Mostrar al equipo' : 'Ocultar al equipo'}">${isCardHidden('utility') ? '🔒' : '👁'}</button>` : '<span class="edit-icon">&#9998;</span>'}
+                ${isCardHidden('utility') ? '<div class="hidden-overlay"><span>🔒 Solo Admin</span></div>' : ''}
+                <div class="card-content">
                 <div class="label">Utilidad Bruta Trimestral</div>
                 <div class="value-row">
                     <span class="value" style="color:var(--blue);">${formatCurrency(util.current)}</span>
@@ -2223,7 +2322,8 @@ function renderPulso() {
                     <span>${utilPct}% de la meta</span>
                     <span>Faltan ${formatCurrency(Math.max(0, util.goal - util.current))}</span>
                 </div>
-            </div>
+                </div>
+            </div>`}
             <div class="pulso-card">
                 <div class="label">Estado de los Rocks Q${state.currentQuarter}</div>
                 <div class="value-row">
