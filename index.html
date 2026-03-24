@@ -301,6 +301,68 @@
         }
         .mini-badge[title]:hover { transform: scale(1.2); }
 
+        /* ===== CARD THEMES (SKINS) ===== */
+        .team-card.skin-fire { background: linear-gradient(145deg, #1a1d27, #2a1a1a); border-color: rgba(255,61,87,.3); }
+        .team-card.skin-fire::after {
+            content:''; position:absolute; inset:0; border-radius:16px; pointer-events:none;
+            background: radial-gradient(ellipse at bottom, rgba(255,100,50,.08) 0%, transparent 60%);
+        }
+        .team-card.skin-ocean { background: linear-gradient(145deg, #1a1d27, #1a2233); border-color: rgba(41,121,255,.3); }
+        .team-card.skin-ocean::after {
+            content:''; position:absolute; inset:0; border-radius:16px; pointer-events:none;
+            background: radial-gradient(ellipse at top, rgba(41,121,255,.06) 0%, transparent 60%);
+        }
+        .team-card.skin-galaxy { background: linear-gradient(145deg, #1a1025, #0f1117); border-color: rgba(124,77,255,.3); }
+        .team-card.skin-galaxy::after {
+            content:''; position:absolute; inset:0; border-radius:16px; pointer-events:none;
+            background: radial-gradient(ellipse at center, rgba(124,77,255,.08) 0%, transparent 50%);
+        }
+        .team-card.skin-gold {
+            background: linear-gradient(145deg, #1a1d27, #2a2517);
+            border-color: rgba(255,215,0,.35);
+            box-shadow: 0 0 20px rgba(255,215,0,.06);
+        }
+        .team-card.skin-gold::after {
+            content:''; position:absolute; inset:0; border-radius:16px; pointer-events:none;
+            background: radial-gradient(ellipse at top, rgba(255,215,0,.06) 0%, transparent 50%);
+        }
+        .team-card.skin-emerald { background: linear-gradient(145deg, #1a1d27, #1a2a1f); border-color: rgba(0,200,83,.3); }
+        .team-card.skin-emerald::after {
+            content:''; position:absolute; inset:0; border-radius:16px; pointer-events:none;
+            background: radial-gradient(ellipse at bottom right, rgba(0,200,83,.06) 0%, transparent 50%);
+        }
+        .team-card.skin-diamond {
+            background: linear-gradient(145deg, #1a2030, #0f1520);
+            border: 1px solid rgba(150,200,255,.25);
+            animation: diamondShimmer 3s ease infinite;
+        }
+        @keyframes diamondShimmer {
+            0%,100% { box-shadow: 0 0 15px rgba(150,200,255,.05); }
+            50% { box-shadow: 0 0 25px rgba(150,200,255,.12); }
+        }
+
+        /* ===== CUSTOM TITLE ===== */
+        .custom-title {
+            font-size: 11px; font-weight: 600; margin-top: 2px; margin-bottom: 6px;
+            font-style: italic;
+        }
+
+        /* ===== REWARDS GRID IN MODAL ===== */
+        .rewards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; }
+        .reward-card {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+            padding: 10px; text-align: center; cursor: pointer; transition: all .2s;
+            position: relative;
+        }
+        .reward-card:hover { border-color: var(--blue); }
+        .reward-card.locked { opacity: .4; cursor: not-allowed; }
+        .reward-card.equipped { border-color: var(--green); background: var(--green-bg); }
+        .reward-card .reward-icon { font-size: 22px; margin-bottom: 4px; }
+        .reward-card .reward-name { font-size: 12px; font-weight: 600; }
+        .reward-card .reward-req { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+        .reward-card .reward-lock { font-size: 14px; position: absolute; top: 6px; right: 6px; }
+        .reward-card .equipped-check { font-size: 14px; position: absolute; top: 6px; right: 6px; color: var(--green); }
+
         /* ===== WEEKLY MVP ===== */
         .mvp-banner {
             background: linear-gradient(135deg, rgba(255,215,0,.08), rgba(255,171,0,.05));
@@ -1668,6 +1730,149 @@ function getAvatarHTML(member, size) {
 }
 
 // =====================================================================
+// ===== REWARDS / UNLOCKABLES SYSTEM =====
+// =====================================================================
+const REWARDS = {
+    skins: [
+        { id: 'default', name: 'Clásico', icon: '🎴', css: '', req: 0, desc: 'El tema por defecto' },
+        { id: 'ocean', name: 'Océano', icon: '🌊', css: 'skin-ocean', req: 50, desc: 'Brillo azul profundo' },
+        { id: 'fire', name: 'Fuego', icon: '🔥', css: 'skin-fire', req: 100, desc: 'Resplandor de fuego' },
+        { id: 'emerald', name: 'Esmeralda', icon: '💚', css: 'skin-emerald', req: 150, desc: 'Aura verde esmeralda' },
+        { id: 'galaxy', name: 'Galaxia', icon: '🌌', css: 'skin-galaxy', req: 250, desc: 'Tema cósmico púrpura' },
+        { id: 'gold', name: 'Dorado', icon: '👑', css: 'skin-gold', req: 350, desc: 'Marco dorado brillante' },
+        { id: 'diamond', name: 'Diamante', icon: '💎', css: 'skin-diamond', req: 500, desc: 'Brillo de diamante animado' },
+    ],
+    titles: [
+        { id: 'none', name: 'Sin título', icon: '—', req: 0 },
+        { id: 'rookie', name: 'El Novato', icon: '🌱', req: 0, condition: 'level >= 0' },
+        { id: 'consistent', name: 'El Consistente', icon: '📊', req: 75, condition: 'streak >= 3' },
+        { id: 'closer', name: 'The Closer', icon: '🤝', req: 100 },
+        { id: 'machine', name: 'La Máquina', icon: '⚙️', req: 150, condition: 'streak >= 4' },
+        { id: 'rockstar', name: 'Rockstar', icon: '🎸', req: 200, condition: 'completedRocks >= 2' },
+        { id: 'legend', name: 'Leyenda Viviente', icon: '🏛️', req: 300 },
+        { id: 'goat', name: 'El G.O.A.T.', icon: '🐐', req: 400, condition: 'hitRate >= 0.9' },
+        { id: 'unstoppable', name: 'Imparable', icon: '⚡', req: 250, condition: 'streak >= 6' },
+        { id: 'mvp', name: 'MVP Permanente', icon: '🏆', req: 350 },
+    ]
+};
+
+function getUnlockedRewards(memberId) {
+    const xp = calculateXP(memberId);
+    const streak = calculateStreak(memberId);
+    const qd = getQuarterData();
+    const memberRocks = qd.rocks.filter(r => r.ownerId === memberId);
+    const completedRocks = memberRocks.filter(r => r.progress === 100).length;
+    const memberMetrics = qd.scorecard.metrics.filter(m => m.ownerId === memberId);
+    let totalHits = 0, totalEntries = 0;
+    memberMetrics.forEach(m => {
+        for (let w = 1; w <= 13; w++) {
+            const wd = qd.scorecard.weeks[w] && qd.scorecard.weeks[w][m.id];
+            if (wd) { totalEntries++; if (wd.good) totalHits++; }
+        }
+    });
+    const hitRate = totalEntries > 0 ? totalHits / totalEntries : 0;
+    const lvl = getLevel(xp);
+
+    const unlockedSkins = REWARDS.skins.filter(s => xp >= s.req);
+    const unlockedTitles = REWARDS.titles.filter(t => {
+        if (xp < t.req) return false;
+        if (t.condition) {
+            // Evaluate condition safely
+            if (t.condition === 'streak >= 3' && streak < 3) return false;
+            if (t.condition === 'streak >= 4' && streak < 4) return false;
+            if (t.condition === 'streak >= 6' && streak < 6) return false;
+            if (t.condition === 'completedRocks >= 2' && completedRocks < 2) return false;
+            if (t.condition === 'hitRate >= 0.9' && hitRate < 0.9) return false;
+            if (t.condition === 'level >= 0') return true;
+        }
+        return true;
+    });
+    return { skins: unlockedSkins, titles: unlockedTitles, xp, streak, completedRocks, hitRate };
+}
+
+function getMemberCosmetics(memberId) {
+    if (!state.cosmetics) state.cosmetics = {};
+    return state.cosmetics[memberId] || { skin: 'default', title: 'none' };
+}
+
+function setMemberCosmetic(memberId, type, value) {
+    if (!state.cosmetics) state.cosmetics = {};
+    if (!state.cosmetics[memberId]) state.cosmetics[memberId] = { skin: 'default', title: 'none' };
+    state.cosmetics[memberId][type] = value;
+    saveState();
+}
+
+function showRewardsShop(memberId) {
+    const member = getMember(memberId);
+    const unlocked = getUnlockedRewards(memberId);
+    const cosmetics = getMemberCosmetics(memberId);
+    const xp = unlocked.xp;
+
+    const skinsHTML = REWARDS.skins.map(s => {
+        const isUnlocked = xp >= s.req;
+        const isEquipped = cosmetics.skin === s.id;
+        return `
+        <div class="reward-card ${isUnlocked ? '' : 'locked'} ${isEquipped ? 'equipped' : ''}"
+             onclick="${isUnlocked ? `equipReward('${memberId}','skin','${s.id}')` : ''}">
+            ${isEquipped ? '<span class="equipped-check">✓</span>' : ''}
+            ${!isUnlocked ? '<span class="reward-lock">🔒</span>' : ''}
+            <div class="reward-icon">${s.icon}</div>
+            <div class="reward-name">${s.name}</div>
+            <div class="reward-req">${isUnlocked ? s.desc : `Necesitas ${s.req} XP (tienes ${xp})`}</div>
+        </div>`;
+    }).join('');
+
+    const titlesHTML = REWARDS.titles.map(t => {
+        const isUnlocked = unlocked.titles.some(ut => ut.id === t.id);
+        const isEquipped = cosmetics.title === t.id;
+        return `
+        <div class="reward-card ${isUnlocked ? '' : 'locked'} ${isEquipped ? 'equipped' : ''}"
+             onclick="${isUnlocked ? `equipReward('${memberId}','title','${t.id}')` : ''}">
+            ${isEquipped ? '<span class="equipped-check">✓</span>' : ''}
+            ${!isUnlocked ? '<span class="reward-lock">🔒</span>' : ''}
+            <div class="reward-icon">${t.icon}</div>
+            <div class="reward-name">${t.name}</div>
+            <div class="reward-req">${isUnlocked ? 'Desbloqueado' : `${t.req} XP${t.condition ? ' + condición' : ''}`}</div>
+        </div>`;
+    }).join('');
+
+    const nextSkin = REWARDS.skins.find(s => xp < s.req);
+    const progressToNext = nextSkin
+        ? `<div style="margin-top:12px;font-size:12px;color:var(--text-muted);">
+            Siguiente skin: ${nextSkin.icon} ${nextSkin.name} — necesitas ${nextSkin.req - xp} XP más
+           </div>`
+        : '<div style="margin-top:12px;font-size:12px;color:var(--gold);">🎉 Todos los skins desbloqueados</div>';
+
+    const html = `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+            ${getAvatarHTML(member, 48)}
+            <div>
+                <div style="font-weight:700;">${member.name}</div>
+                <div style="font-size:13px;color:var(--text-muted);">${xp} XP total &bull; Racha: ${unlocked.streak} semanas</div>
+            </div>
+        </div>
+        <h3 style="font-size:14px;color:var(--text-muted);margin-bottom:4px;">Temas de Tarjeta</h3>
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Click para equipar. Se desbloquean con XP.</p>
+        <div class="rewards-grid">${skinsHTML}</div>
+        ${progressToNext}
+        <h3 style="font-size:14px;color:var(--text-muted);margin-top:18px;margin-bottom:4px;">Títulos</h3>
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Títulos especiales bajo tu nombre. Algunos requieren condiciones extra.</p>
+        <div class="rewards-grid">${titlesHTML}</div>
+    `;
+    openModal('Recompensas — ' + member.name, html, null, { hideButtons: true });
+}
+
+function equipReward(memberId, type, value) {
+    setMemberCosmetic(memberId, type, value);
+    showRewardsShop(memberId); // Re-render modal
+    renderLeaderboard();
+    const reward = type === 'skin'
+        ? REWARDS.skins.find(s => s.id === value)
+        : REWARDS.titles.find(t => t.id === value);
+    showToast(`${reward.icon} ${reward.name} equipado`);
+}
+
+// =====================================================================
 // ===== PROFILE EDITING =====
 // =====================================================================
 function showEditMember(memberId) {
@@ -2031,16 +2236,24 @@ function renderLeaderboard() {
         const lvl = getLevel(xp);
         const streak = calculateStreak(m.id);
         const badges = calculateBadges(m.id);
+        const cosmetics = getMemberCosmetics(m.id);
+        const skinCSS = cosmetics.skin !== 'default' ? 'skin-' + cosmetics.skin : '';
+        const titleObj = REWARDS.titles.find(t => t.id === cosmetics.title);
+        const titleHTML = titleObj && titleObj.id !== 'none'
+            ? `<div class="custom-title" style="color:${lvl.color};">${titleObj.icon} ${titleObj.name}</div>`
+            : '';
         const badgesHTML = badges.length > 0
             ? `<div class="badges-row">${badges.map(b => `<div class="mini-badge" title="${b.title}">${b.icon}</div>`).join('')}</div>`
             : '';
 
         return `
-        <div class="team-card editable" onclick="showEditLeaderboardMember('${m.id}')">
-            <span class="edit-icon" onclick="event.stopPropagation(); showEditMember('${m.id}')">&#9998;</span>
+        <div class="team-card editable ${skinCSS}" onclick="showEditLeaderboardMember('${m.id}')">
+            <span class="edit-icon" onclick="event.stopPropagation(); showEditMember('${m.id}')" title="Editar Perfil">&#9998;</span>
+            <span class="delete-icon" onclick="event.stopPropagation(); showRewardsShop('${m.id}')" title="Recompensas" style="right:10px;top:40px;">🎁</span>
             <div class="rank ${m.rank === 1 ? 'first' : ''}">#${m.rank}</div>
             ${getAvatarHTML(m, 68)}
             <div class="name">${m.name}</div>
+            ${titleHTML}
             <div class="role">${m.role}</div>
             <div class="level-badge" style="background:${lvl.color};">${lvl.title} &bull; ${xp} XP</div>
             <div class="xp-bar"><div class="xp-fill" style="width:${(lvl.xpInLevel / lvl.xpNeeded * 100).toFixed(0)}%;"></div></div>
