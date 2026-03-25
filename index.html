@@ -2666,9 +2666,9 @@ function dismissSetup() {
 // =====================================================================
 // ===== RAM (CEO DASHBOARD) — Weekly Tracking =====
 // =====================================================================
-const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const MONTHS_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-const RAM_SECTIONS = [
+const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DEFAULT_RAM_SECTIONS = [
     { id: 'northstar', name: '⭐ NORTH STAR METRICS', color: '#1a237e', metrics: [
         { id: 'net_revenue_growth', name: 'Net Revenue Growth', format: '$', type: 'total' },
         { id: 'frontend_roas', name: 'Front End ROAS', format: '#', type: 'avg' },
@@ -2701,8 +2701,8 @@ const RAM_SECTIONS = [
     ]},
     { id: 'sales', name: '💰 SALES', color: '#bf360c', metrics: [
         { id: 'new_clients_closed', name: 'New Clients Closed', format: '#', type: 'total' },
-        { id: 'tasa_respuesta', name: 'Tasa de Respuesta %', format: '%', type: 'avg' },
-        { id: 'tasa_confirmacion', name: 'Tasa de Confirmación en Intro %', format: '%', type: 'avg' },
+        { id: 'tasa_respuesta', name: 'Response Rate %', format: '%', type: 'avg' },
+        { id: 'tasa_confirmacion', name: 'Intro Confirmation Rate %', format: '%', type: 'avg' },
         { id: 'call_to_close', name: 'Call To Close %', format: '%', type: 'avg' },
         { id: 'uf_cash', name: 'UF Cash %', format: '%', type: 'avg' }
     ]},
@@ -2719,6 +2719,11 @@ const RAM_SECTIONS = [
         { id: 'client_lead_schedule', name: 'Lead To Schedule %', format: '%', type: 'avg' }
     ]}
 ];
+
+function getRAMSections() {
+    if (!state.ramSections) state.ramSections = JSON.parse(JSON.stringify(DEFAULT_RAM_SECTIONS));
+    return state.ramSections;
+}
 
 function getRAMMonth() {
     if (!state.ram) state.ram = {};
@@ -2748,7 +2753,7 @@ function calcMonthlyActual(metricId, metricType) {
     }
     if (weeks.length === 0) return null;
     if (metricType === 'avg') return weeks.reduce((a,b) => a+b, 0) / weeks.length;
-    return weeks.reduce((a,b) => a+b, 0); // total
+    return weeks.reduce((a,b) => a+b, 0);
 }
 
 function fmtRAM(value, format) {
@@ -2765,7 +2770,7 @@ function fmtRAM(value, format) {
 
 function getStatusColor(metricId, metric) {
     const status = rv(metricId, 'status');
-    if (status) return status; // manual override
+    if (status) return status;
     const actual = calcMonthlyActual(metricId, metric.type);
     const target = parseFloat(rv(metricId, 'target'));
     if (actual === null || isNaN(target) || target === 0) return '';
@@ -2793,6 +2798,152 @@ function statusBadge(color) {
     return `<span style="background:${c.bg};color:#fff;padding:2px 10px;border-radius:4px;font-size:11px;font-weight:700;">${c.label}</span>`;
 }
 
+// --- SECTION & METRIC MANAGEMENT (add/edit/delete) ---
+function showAddSection() {
+    openModal('Add Section', `
+        <div class="form-group"><label>Section Name</label><input type="text" id="f-sec-name" placeholder="e.g. 📈 GROWTH METRICS"></div>
+        <div class="form-group"><label>Color</label><input type="color" id="f-sec-color" value="#2979ff" style="width:60px;height:36px;border:none;cursor:pointer;"></div>
+    `, () => {
+        const name = document.getElementById('f-sec-name').value.trim();
+        if (!name) { showToast('Name is required'); return; }
+        const sections = getRAMSections();
+        sections.push({ id: 'sec_' + Date.now(), name, color: document.getElementById('f-sec-color').value, metrics: [] });
+        saveState(); closeModal(); renderRAM();
+    });
+}
+
+function showEditSection(secIdx) {
+    const sections = getRAMSections();
+    const sec = sections[secIdx];
+    openModal('Edit Section', `
+        <div class="form-group"><label>Section Name</label><input type="text" id="f-sec-name" value="${sec.name}"></div>
+        <div class="form-group"><label>Color</label><input type="color" id="f-sec-color" value="${sec.color}" style="width:60px;height:36px;border:none;cursor:pointer;"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+            ${secIdx > 0 ? `<button class="btn btn-cancel" onclick="moveSection(${secIdx},-1)">↑ Move Up</button>` : ''}
+            ${secIdx < sections.length-1 ? `<button class="btn btn-cancel" onclick="moveSection(${secIdx},1)">↓ Move Down</button>` : ''}
+            <button class="btn" style="background:var(--red);color:#fff;" onclick="deleteSection(${secIdx})">Delete Section</button>
+        </div>
+    `, () => {
+        sec.name = document.getElementById('f-sec-name').value.trim() || sec.name;
+        sec.color = document.getElementById('f-sec-color').value;
+        saveState(); closeModal(); renderRAM();
+    });
+}
+
+function moveSection(idx, dir) {
+    const s = getRAMSections();
+    const t = idx + dir;
+    if (t < 0 || t >= s.length) return;
+    [s[idx], s[t]] = [s[t], s[idx]];
+    saveState(); closeModal(); renderRAM();
+}
+
+function deleteSection(idx) {
+    if (!confirm('Delete this entire section and all its metrics?')) return;
+    getRAMSections().splice(idx, 1);
+    saveState(); closeModal(); renderRAM();
+}
+
+function showAddMetric(secIdx) {
+    openModal('Add Metric', `
+        <div class="form-group"><label>Metric Name</label><input type="text" id="f-met-name" placeholder="e.g. New Revenue"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div class="form-group">
+                <label>Format</label>
+                <select id="f-met-format" style="width:100%;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);">
+                    <option value="$">$ Dollar</option>
+                    <option value="%">% Percentage</option>
+                    <option value="#"># Number</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Aggregation</label>
+                <select id="f-met-type" style="width:100%;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);">
+                    <option value="total">Total (sum weeks)</option>
+                    <option value="avg">Average (avg weeks)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Lower is Better?</label>
+                <select id="f-met-lower" style="width:100%;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);">
+                    <option value="false">No (higher = green)</option>
+                    <option value="true">Yes (lower = green)</option>
+                </select>
+            </div>
+        </div>
+    `, () => {
+        const name = document.getElementById('f-met-name').value.trim();
+        if (!name) { showToast('Name is required'); return; }
+        const sections = getRAMSections();
+        sections[secIdx].metrics.push({
+            id: 'met_' + Date.now(),
+            name,
+            format: document.getElementById('f-met-format').value,
+            type: document.getElementById('f-met-type').value,
+            lowerIsBetter: document.getElementById('f-met-lower').value === 'true'
+        });
+        saveState(); closeModal(); renderRAM();
+    });
+}
+
+function showEditMetricDef(secIdx, metIdx) {
+    const sections = getRAMSections();
+    const met = sections[secIdx].metrics[metIdx];
+    openModal('Edit Metric Definition', `
+        <div class="form-group"><label>Metric Name</label><input type="text" id="f-met-name" value="${met.name}"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div class="form-group">
+                <label>Format</label>
+                <select id="f-met-format" style="width:100%;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);">
+                    <option value="$" ${met.format==='$'?'selected':''}>$ Dollar</option>
+                    <option value="%" ${met.format==='%'?'selected':''}>% Percentage</option>
+                    <option value="#" ${met.format==='#'?'selected':''}># Number</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Aggregation</label>
+                <select id="f-met-type" style="width:100%;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);">
+                    <option value="total" ${met.type==='total'?'selected':''}>Total (sum)</option>
+                    <option value="avg" ${met.type==='avg'?'selected':''}>Average</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Lower is Better?</label>
+                <select id="f-met-lower" style="width:100%;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);">
+                    <option value="false" ${!met.lowerIsBetter?'selected':''}>No</option>
+                    <option value="true" ${met.lowerIsBetter?'selected':''}>Yes</option>
+                </select>
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+            ${metIdx > 0 ? `<button class="btn btn-cancel" onclick="moveMetric(${secIdx},${metIdx},-1)">↑ Move Up</button>` : ''}
+            ${metIdx < sections[secIdx].metrics.length-1 ? `<button class="btn btn-cancel" onclick="moveMetric(${secIdx},${metIdx},1)">↓ Move Down</button>` : ''}
+            <button class="btn" style="background:var(--red);color:#fff;" onclick="deleteMetric(${secIdx},${metIdx})">Delete Metric</button>
+        </div>
+    `, () => {
+        met.name = document.getElementById('f-met-name').value.trim() || met.name;
+        met.format = document.getElementById('f-met-format').value;
+        met.type = document.getElementById('f-met-type').value;
+        met.lowerIsBetter = document.getElementById('f-met-lower').value === 'true';
+        saveState(); closeModal(); renderRAM();
+    });
+}
+
+function moveMetric(secIdx, metIdx, dir) {
+    const mets = getRAMSections()[secIdx].metrics;
+    const t = metIdx + dir;
+    if (t < 0 || t >= mets.length) return;
+    [mets[metIdx], mets[t]] = [mets[t], mets[metIdx]];
+    saveState(); closeModal(); renderRAM();
+}
+
+function deleteMetric(secIdx, metIdx) {
+    if (!confirm('Delete this metric? Weekly data will be preserved.')) return;
+    getRAMSections()[secIdx].metrics.splice(metIdx, 1);
+    saveState(); closeModal(); renderRAM();
+}
+
+// --- DATA EDITING ---
 function showEditRAMRow(metricId, metricName, format, metricType) {
     if (!isAdmin()) { promptAdminPin(); return; }
     const w1 = rv(metricId, 'w1') ?? '';
@@ -2811,10 +2962,10 @@ function showEditRAMRow(metricId, metricName, format, metricType) {
 
     openModal(`${metricName}`, `
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-            <div class="form-group"><label>Semana 1 ${pref}${suf}</label><input type="number" id="f-rw1" value="${w1}" step="any"></div>
-            <div class="form-group"><label>Semana 2 ${pref}${suf}</label><input type="number" id="f-rw2" value="${w2}" step="any"></div>
-            <div class="form-group"><label>Semana 3 ${pref}${suf}</label><input type="number" id="f-rw3" value="${w3}" step="any"></div>
-            <div class="form-group"><label>Semana 4 ${pref}${suf}</label><input type="number" id="f-rw4" value="${w4}" step="any"></div>
+            <div class="form-group"><label>Week 1 ${pref}${suf}</label><input type="number" id="f-rw1" value="${w1}" step="any"></div>
+            <div class="form-group"><label>Week 2 ${pref}${suf}</label><input type="number" id="f-rw2" value="${w2}" step="any"></div>
+            <div class="form-group"><label>Week 3 ${pref}${suf}</label><input type="number" id="f-rw3" value="${w3}" step="any"></div>
+            <div class="form-group"><label>Week 4 ${pref}${suf}</label><input type="number" id="f-rw4" value="${w4}" step="any"></div>
             <div class="form-group"><label>Remainder ${pref}${suf}</label><input type="number" id="f-rw5" value="${w5}" step="any"></div>
             <div class="form-group"><label>Monthly Target ${pref}${suf}</label><input type="number" id="f-rtarget" value="${target}" step="any"></div>
         </div>
@@ -2829,15 +2980,15 @@ function showEditRAMRow(metricId, metricName, format, metricType) {
                     <option value="red" ${status==='red'?'selected':''}>🔴 Red</option>
                 </select>
             </div>
-            <div class="form-group"><label>Metric Owner</label><input type="text" id="f-rowner" value="${owner}" placeholder="Ej: Damaso"></div>
-            <div class="form-group"><label>Metric Source</label><input type="text" id="f-rsource" value="${source}" placeholder="Ej: Mercury"></div>
+            <div class="form-group"><label>Metric Owner</label><input type="text" id="f-rowner" value="${owner}" placeholder="e.g. Damaso"></div>
+            <div class="form-group"><label>Metric Source</label><input type="text" id="f-rsource" value="${source}" placeholder="e.g. Mercury"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
-            <div class="form-group"><label>Nota Semana 1-2</label><textarea id="f-rnote1" rows="2" style="width:100%;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);resize:vertical;">${note1}</textarea></div>
-            <div class="form-group"><label>Nota Semana 3-4</label><textarea id="f-rnote2" rows="2" style="width:100%;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);resize:vertical;">${note2}</textarea></div>
+            <div class="form-group"><label>Notes (Week 1-2)</label><textarea id="f-rnote1" rows="2" style="width:100%;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);resize:vertical;">${note1}</textarea></div>
+            <div class="form-group"><label>Notes (Week 3-4)</label><textarea id="f-rnote2" rows="2" style="width:100%;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);resize:vertical;">${note2}</textarea></div>
         </div>
         <div style="margin-top:10px;padding:10px;background:rgba(255,255,255,.03);border-radius:8px;">
-            <span style="color:var(--text-muted);font-size:12px;">Tipo: <strong>${metricType === 'avg' ? 'Promedio' : 'Total'}</strong> — Monthly Actual se calcula automáticamente</span>
+            <span style="color:var(--text-muted);font-size:12px;">Type: <strong>${metricType === 'avg' ? 'Average' : 'Total'}</strong> — Monthly Actual is calculated automatically</span>
         </div>
     `, () => {
         const fields = {w1:'f-rw1',w2:'f-rw2',w3:'f-rw3',w4:'f-rw4',w5:'f-rw5',target:'f-rtarget'};
@@ -2855,14 +3006,15 @@ function showEditRAMRow(metricId, metricName, format, metricType) {
     });
 }
 
+// --- RENDER ---
 function renderRAM() {
     if (!isAdmin()) {
         document.getElementById('section-ram').innerHTML = `
             <div class="empty-state" style="padding:80px 20px;">
                 <div class="empty-icon">🔒</div>
-                <p style="font-size:18px;margin-bottom:12px;">CEO Dashboard — Acceso Restringido</p>
-                <p style="color:var(--text-muted);margin-bottom:20px;">Necesitas tu PIN de admin para ver esta información.</p>
-                <button class="btn btn-primary" onclick="promptAdminPin()">Ingresar PIN</button>
+                <p style="font-size:18px;margin-bottom:12px;">CEO Dashboard — Restricted Access</p>
+                <p style="color:var(--text-muted);margin-bottom:20px;">Enter your admin PIN to view this data.</p>
+                <button class="btn btn-primary" onclick="promptAdminPin()">Enter PIN</button>
             </div>`;
         return;
     }
@@ -2870,6 +3022,8 @@ function renderRAM() {
     const month = state.ramMonth !== undefined ? state.ramMonth : new Date().getMonth();
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
+    const sections = getRAMSections();
+    const editMode = state.ramEditMode || false;
 
     // Month tabs
     let monthTabs = '';
@@ -2878,15 +3032,20 @@ function renderRAM() {
         const isCurrent = m === currentMonth && year === currentYear;
         monthTabs += `<button class="view-tab ${isActive ? 'active' : ''}"
             onclick="state.ramMonth=${m};saveState();renderRAM();"
-            style="${isCurrent && !isActive ? 'border:1px solid var(--blue);' : ''} ${isActive ? '' : ''}"
+            style="${isCurrent && !isActive ? 'border:1px solid var(--blue);' : ''}"
             >${MONTHS_SHORT[m]}</button>`;
     }
 
     // Table rows
     let rows = '';
-    for (const section of RAM_SECTIONS) {
-        rows += `<tr class="section-row"><td colspan="12" style="border-left:3px solid ${section.color};">${section.name}</td></tr>`;
-        for (const metric of section.metrics) {
+    sections.forEach((section, secIdx) => {
+        rows += `<tr class="section-row">
+            <td colspan="12" style="border-left:3px solid ${section.color};">
+                ${editMode ? `<span style="cursor:pointer;" onclick="event.stopPropagation();showEditSection(${secIdx})">${section.name} ✏️</span>` : section.name}
+                ${editMode ? `<button class="add-btn" style="float:right;font-size:11px;padding:2px 10px;" onclick="event.stopPropagation();showAddMetric(${secIdx})">+ Metric</button>` : ''}
+            </td>
+        </tr>`;
+        section.metrics.forEach((metric, metIdx) => {
             const w1 = rv(metric.id, 'w1');
             const w2 = rv(metric.id, 'w2');
             const w3 = rv(metric.id, 'w3');
@@ -2895,13 +3054,15 @@ function renderRAM() {
             const target = rv(metric.id, 'target');
             const actual = calcMonthlyActual(metric.id, metric.type);
             const owner = rv(metric.id, 'owner') || '';
-            const source = rv(metric.id, 'source') || '';
             const note1 = rv(metric.id, 'note1') || '';
             const statusColor = getStatusColor(metric.id, metric);
             const typeLabel = metric.type === 'avg' ? 'Avg' : 'Total';
 
             rows += `<tr class="editable" onclick="showEditRAMRow('${metric.id}','${metric.name.replace(/'/g,"\\'")}','${metric.format}','${metric.type}')">
-                <td class="metric-name">${metric.name}</td>
+                <td class="metric-name">
+                    ${editMode ? `<span onclick="event.stopPropagation();showEditMetricDef(${secIdx},${metIdx})" style="cursor:pointer;" title="Edit definition">✏️</span> ` : ''}
+                    ${metric.name}
+                </td>
                 <td class="month-cell">${fmtRAM(w1, metric.format)}</td>
                 <td class="month-cell">${fmtRAM(w2, metric.format)}</td>
                 <td class="month-cell">${fmtRAM(w3, metric.format)}</td>
@@ -2914,8 +3075,8 @@ function renderRAM() {
                 <td class="month-cell" style="font-size:11px;color:var(--text-muted);">${owner}</td>
                 <td class="month-cell" style="font-size:11px;color:var(--text-muted);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${note1}">${note1 ? '📝' : ''}</td>
             </tr>`;
-        }
-    }
+        });
+    });
 
     document.getElementById('section-ram').innerHTML = `
         <div class="section-header" style="flex-wrap:wrap;gap:12px;">
@@ -2926,41 +3087,48 @@ function renderRAM() {
                 <button class="nav-btn" onclick="navRAMYear(-1)">&larr;</button>
                 <button class="nav-btn" onclick="navRAMYear(1)">&rarr;</button>
             </div>
-            <div class="ram-admin-lock unlocked" onclick="lockAdmin()">
-                🔓 Admin activo
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button class="add-btn" onclick="toggleRAMEditMode()" style="${editMode ? 'background:var(--blue-bg);border-color:var(--blue);' : ''}">
+                    ${editMode ? '✓ Done Editing' : '⚙ Edit Metrics'}
+                </button>
+                ${editMode ? '<button class="add-btn" onclick="showAddSection()">+ Section</button>' : ''}
+                <div class="ram-admin-lock unlocked" onclick="lockAdmin()">🔓 Admin</div>
             </div>
         </div>
         <div style="margin-bottom:14px;">
-            <div class="view-switcher" style="flex-wrap:wrap;">
-                ${monthTabs}
-            </div>
+            <div class="view-switcher" style="flex-wrap:wrap;">${monthTabs}</div>
         </div>
         <div style="margin-bottom:10px;display:flex;align-items:center;gap:16px;">
             <h2 style="font-size:20px;font-weight:800;margin:0;">${MONTHS_FULL[month]} / ${year}</h2>
-            <span style="color:var(--text-muted);font-size:13px;">Click en cualquier fila para editar semanas, target, status y notas</span>
+            <span style="color:var(--text-muted);font-size:13px;">${editMode ? 'Click ✏️ to rename, reorder or delete metrics & sections' : 'Click any row to edit weekly data, target, status & notes'}</span>
         </div>
         <div class="ram-container" style="max-height: calc(100vh - 260px); overflow-y: auto;">
             <table class="ram-table">
                 <thead>
                     <tr>
-                        <th style="min-width:200px;">Métrica</th>
-                        <th style="text-align:center;">S1</th>
-                        <th style="text-align:center;">S2</th>
-                        <th style="text-align:center;">S3</th>
-                        <th style="text-align:center;">S4</th>
+                        <th style="min-width:200px;">Metric</th>
+                        <th style="text-align:center;">W1</th>
+                        <th style="text-align:center;">W2</th>
+                        <th style="text-align:center;">W3</th>
+                        <th style="text-align:center;">W4</th>
                         <th style="text-align:center;border-right:2px solid var(--border);">Rem</th>
-                        <th style="text-align:center;font-size:10px;">Tipo</th>
+                        <th style="text-align:center;font-size:10px;">Type</th>
                         <th style="text-align:center;color:var(--green);">Actual</th>
                         <th style="text-align:center;color:var(--blue);">Target</th>
                         <th style="text-align:center;">Status</th>
                         <th style="text-align:center;">Owner</th>
-                        <th style="text-align:center;">Notas</th>
+                        <th style="text-align:center;">Notes</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>
             </table>
         </div>
     `;
+}
+
+function toggleRAMEditMode() {
+    state.ramEditMode = !state.ramEditMode;
+    renderRAM();
 }
 
 function navRAMYear(delta) {
