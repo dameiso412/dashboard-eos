@@ -2664,114 +2664,192 @@ function dismissSetup() {
 }
 
 // =====================================================================
-// ===== RAM (CEO DASHBOARD) =====
+// ===== RAM (CEO DASHBOARD) — Weekly Tracking =====
 // =====================================================================
-const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MONTHS_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const RAM_SECTIONS = [
-    { id: 'northstar', name: '⭐ North Star Metrics', metrics: [
-        { id: 'net_revenue_growth', name: 'Net Revenue Growth', format: '$' },
-        { id: 'lifetime_value', name: 'Lifetime Value (LTV)', format: '$' },
-        { id: 'cac_ltgp', name: 'CAC : LTGP', format: '%' },
-        { id: 'client_retainer_avg', name: 'Client Retainer [AVG]', format: '$' }
+    { id: 'northstar', name: '⭐ NORTH STAR METRICS', color: '#1a237e', metrics: [
+        { id: 'net_revenue_growth', name: 'Net Revenue Growth', format: '$', type: 'total' },
+        { id: 'frontend_roas', name: 'Front End ROAS', format: '#', type: 'avg' },
+        { id: 'lifetime_value', name: 'Lifetime Value', format: '$', type: 'total' },
+        { id: 'cac_ltgp', name: 'CAC : LTGP', format: '%', type: 'avg' },
+        { id: 'client_retainer_avg', name: 'Client Retainer Amount [AVG]', format: '$', type: 'total' },
+        { id: 'net_profit_pct', name: 'Net Profit % (OP, MK, TM-REV)', format: '%', type: 'avg' }
     ]},
-    { id: 'evergreen', name: '🌿 Evergreen Metrics', metrics: [
-        { id: 'operating_expenses', name: 'Operating Expenses', format: '$' },
-        { id: 'be_recurring_revenue', name: 'BE Recurring Revenue', format: '$' },
-        { id: 'new_cash_collected', name: 'New Cash Collected', format: '$' },
-        { id: 'total_revenue', name: 'Total Revenue', format: '$' },
-        { id: 'net_operating_profit', name: 'Net Operating Profit $', format: '$' },
-        { id: 'net_operating_profit_pct', name: 'Net Operating Profit %', format: '%' }
+    { id: 'evergreen', name: '🌿 EVERGREEN METRICS', color: '#1b5e20', metrics: [
+        { id: 'operating_expenses', name: 'Operating Expenses', format: '$', type: 'total', lowerIsBetter: true },
+        { id: 'refunds_given', name: 'Refunds Given ($)', format: '$', type: 'total', lowerIsBetter: true },
+        { id: 'be_recurring_revenue', name: 'BE Recurring Revenue', format: '$', type: 'total' },
+        { id: 'new_cash_collected', name: 'New Cash Collected', format: '$', type: 'total' },
+        { id: 'total_revenue', name: 'Total Revenue', format: '$', type: 'total' },
+        { id: 'net_operating_profit', name: 'Net Operating Profit $', format: '$', type: 'total' },
+        { id: 'net_operating_profit_pct', name: 'Net Operating Profit %', format: '%', type: 'avg' }
     ]},
-    { id: 'accounting', name: '📊 Accounting / Finance', metrics: [
-        { id: 'b2b_ad_spend', name: 'B2B Ad Spend', format: '$' },
-        { id: 'hiring_ad_spend', name: 'Hiring Ad Spend', format: '$' }
+    { id: 'accounting', name: '📊 ACCOUNTING / FINANCE', color: '#4a148c', metrics: [
+        { id: 'b2b_ad_spend', name: 'B2B Ad Spend', format: '$', type: 'total', lowerIsBetter: true },
+        { id: 'hiring_ad_spend', name: 'Hiring Ad Spend & Placements', format: '$', type: 'total', lowerIsBetter: true }
     ]},
-    { id: 'marketing', name: '📣 Marketing', metrics: [
-        { id: 'cost_per_lead', name: 'Cost Per Lead', format: '$' },
-        { id: 'lead_to_schedule', name: 'Lead To Schedule %', format: '%' },
-        { id: 'demo_calls_booked', name: 'Demo Calls Booked', format: '#' },
-        { id: 'demo_call_show', name: 'Demo Call Show %', format: '%' },
-        { id: 'cost_per_offer', name: 'Cost Per Offer Made', format: '$' },
-        { id: 'cost_acquire_client', name: 'Cost to Acquire Client', format: '$' }
+    { id: 'marketing', name: '📣 MARKETING', color: '#e65100', metrics: [
+        { id: 'cost_per_lead', name: 'Cost Per Lead', format: '$', type: 'avg', lowerIsBetter: true },
+        { id: 'cpb', name: 'CPB', format: '$', type: 'avg', lowerIsBetter: true },
+        { id: 'lead_to_schedule', name: 'Lead To Schedule %', format: '%', type: 'avg' },
+        { id: 'demo_calls_booked', name: 'Demo Calls Booked', format: '#', type: 'total' },
+        { id: 'demo_call_show', name: 'Demo Call Show %', format: '%', type: 'avg' },
+        { id: 'cost_per_offer', name: 'Cost Per Offer Made', format: '$', type: 'avg', lowerIsBetter: true },
+        { id: 'cost_acquire_client', name: 'Cost to Acquire a Client', format: '$', type: 'total', lowerIsBetter: true }
     ]},
-    { id: 'sales', name: '💰 Sales', metrics: [
-        { id: 'new_clients_closed', name: 'New Clients Closed', format: '#' },
-        { id: 'call_to_close', name: 'Call To Close %', format: '%' },
-        { id: 'uf_cash', name: 'UF Cash %', format: '%' }
+    { id: 'sales', name: '💰 SALES', color: '#bf360c', metrics: [
+        { id: 'new_clients_closed', name: 'New Clients Closed', format: '#', type: 'total' },
+        { id: 'tasa_respuesta', name: 'Tasa de Respuesta %', format: '%', type: 'avg' },
+        { id: 'tasa_confirmacion', name: 'Tasa de Confirmación en Intro %', format: '%', type: 'avg' },
+        { id: 'call_to_close', name: 'Call To Close %', format: '%', type: 'avg' },
+        { id: 'uf_cash', name: 'UF Cash %', format: '%', type: 'avg' }
     ]},
-    { id: 'client_success', name: '🤝 Client Success', metrics: [
-        { id: 'clients_lost', name: 'Clients Lost', format: '#', lowerIsBetter: true },
-        { id: 'grace_periods', name: 'Grace Periods', format: '#', lowerIsBetter: true },
-        { id: 'upsells', name: 'Upsells', format: '#' },
-        { id: 'reviews', name: 'Reviews', format: '#' }
+    { id: 'client_success', name: '🤝 CLIENT SUCCESS', color: '#006064', metrics: [
+        { id: 'clients_lost', name: 'Clients Lost', format: '#', type: 'total', lowerIsBetter: true },
+        { id: 'grace_periods', name: 'Grace Periods Given', format: '#', type: 'total', lowerIsBetter: true },
+        { id: 'referrals', name: 'Referrals', format: '#', type: 'total' },
+        { id: 'upsells', name: 'Upsells', format: '#', type: 'total' },
+        { id: 'reviews', name: 'Reviews', format: '#', type: 'total' }
+    ]},
+    { id: 'client_marketing', name: '📱 CLIENT MARKETING', color: '#311b92', metrics: [
+        { id: 'cost_per_appointment', name: 'Cost Per Appointment', format: '$', type: 'avg', lowerIsBetter: true },
+        { id: 'client_cpl', name: 'Client CPL', format: '$', type: 'avg', lowerIsBetter: true },
+        { id: 'client_lead_schedule', name: 'Lead To Schedule %', format: '%', type: 'avg' }
     ]}
 ];
 
-function getRAMData() {
+function getRAMMonth() {
     if (!state.ram) state.ram = {};
     const year = state.ramYear || new Date().getFullYear();
-    if (!state.ram[year]) state.ram[year] = {};
-    return state.ram[year];
+    const month = state.ramMonth !== undefined ? state.ramMonth : new Date().getMonth();
+    const key = `${year}-${month}`;
+    if (!state.ram[key]) state.ram[key] = {};
+    return state.ram[key];
 }
 
-function getRAMValue(metricId, month, type) {
-    const data = getRAMData();
-    const key = `${metricId}_${month}_${type}`;
-    return data[key] !== undefined ? data[key] : null;
+function rv(metricId, field) {
+    const d = getRAMMonth();
+    return d[`${metricId}_${field}`] !== undefined ? d[`${metricId}_${field}`] : null;
 }
 
-function setRAMValue(metricId, month, type, value) {
-    const data = getRAMData();
-    const key = `${metricId}_${month}_${type}`;
-    data[key] = value;
+function sv(metricId, field, value) {
+    const d = getRAMMonth();
+    d[`${metricId}_${field}`] = value;
     saveState();
 }
 
-function formatRAMValue(value, format) {
+function calcMonthlyActual(metricId, metricType) {
+    const weeks = [];
+    for (let w = 1; w <= 5; w++) {
+        const v = rv(metricId, `w${w}`);
+        if (v !== null && v !== '' && !isNaN(parseFloat(v))) weeks.push(parseFloat(v));
+    }
+    if (weeks.length === 0) return null;
+    if (metricType === 'avg') return weeks.reduce((a,b) => a+b, 0) / weeks.length;
+    return weeks.reduce((a,b) => a+b, 0); // total
+}
+
+function fmtRAM(value, format) {
     if (value === null || value === undefined || value === '') return '—';
     const n = parseFloat(value);
-    if (isNaN(n)) return value;
-    if (format === '$') return n >= 1000 ? '$' + (n/1000).toFixed(1) + 'K' : '$' + n.toLocaleString();
-    if (format === '%') return n.toFixed(1) + '%';
-    return n.toLocaleString();
-}
-
-function getRAMCellStatus(metricId, month, metric) {
-    const plan = parseFloat(getRAMValue(metricId, month, 'plan'));
-    const actual = parseFloat(getRAMValue(metricId, month, 'actual'));
-    if (isNaN(plan) || isNaN(actual) || plan === 0) return '';
-    const ratio = actual / plan;
-    if (metric.lowerIsBetter) {
-        if (actual <= plan) return 'status-green';
-        if (actual <= plan * 1.2) return 'status-yellow';
-        return 'status-red';
+    if (isNaN(n)) return String(value);
+    if (format === '$') {
+        if (Math.abs(n) >= 1000) return '$' + (n/1000).toFixed(2) + 'K';
+        return '$' + n.toFixed(2);
     }
-    if (ratio >= 0.9) return 'status-green';
-    if (ratio >= 0.7) return 'status-yellow';
-    return 'status-red';
+    if (format === '%') return n.toFixed(2) + '%';
+    return n % 1 === 0 ? n.toString() : n.toFixed(2);
 }
 
-function showEditRAMCell(metricId, metricName, month, format) {
+function getStatusColor(metricId, metric) {
+    const status = rv(metricId, 'status');
+    if (status) return status; // manual override
+    const actual = calcMonthlyActual(metricId, metric.type);
+    const target = parseFloat(rv(metricId, 'target'));
+    if (actual === null || isNaN(target) || target === 0) return '';
+    const ratio = actual / target;
+    if (metric.lowerIsBetter) {
+        if (actual <= target) return 'green';
+        if (actual <= target * 1.15) return 'yellow';
+        return 'red';
+    }
+    if (ratio >= 0.95) return 'green';
+    if (ratio >= 0.85) return 'light-green';
+    if (ratio >= 0.7) return 'yellow';
+    return 'red';
+}
+
+function statusBadge(color) {
+    const colors = {
+        'green': { bg: 'var(--green)', label: 'Green' },
+        'light-green': { bg: '#66bb6a', label: 'Light Green' },
+        'yellow': { bg: 'var(--yellow)', label: 'Yellow' },
+        'red': { bg: 'var(--red)', label: 'Red' },
+    };
+    const c = colors[color];
+    if (!c) return '';
+    return `<span style="background:${c.bg};color:#fff;padding:2px 10px;border-radius:4px;font-size:11px;font-weight:700;">${c.label}</span>`;
+}
+
+function showEditRAMRow(metricId, metricName, format, metricType) {
     if (!isAdmin()) { promptAdminPin(); return; }
-    const monthName = MONTHS[month];
-    const planVal = getRAMValue(metricId, month, 'plan') || '';
-    const actualVal = getRAMValue(metricId, month, 'actual') || '';
-    const prefix = format === '$' ? '$' : '';
-    const suffix = format === '%' ? '%' : '';
-    openModal(`${metricName} — ${monthName}`, `
-        <div class="form-group">
-            <label>Plan ${prefix}${suffix}</label>
-            <input type="number" id="f-ram-plan" value="${planVal}" step="any" placeholder="Meta planificada">
+    const w1 = rv(metricId, 'w1') ?? '';
+    const w2 = rv(metricId, 'w2') ?? '';
+    const w3 = rv(metricId, 'w3') ?? '';
+    const w4 = rv(metricId, 'w4') ?? '';
+    const w5 = rv(metricId, 'w5') ?? '';
+    const target = rv(metricId, 'target') ?? '';
+    const status = rv(metricId, 'status') ?? '';
+    const owner = rv(metricId, 'owner') ?? '';
+    const source = rv(metricId, 'source') ?? '';
+    const note1 = rv(metricId, 'note1') ?? '';
+    const note2 = rv(metricId, 'note2') ?? '';
+    const pref = format === '$' ? '$' : '';
+    const suf = format === '%' ? '%' : '';
+
+    openModal(`${metricName}`, `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div class="form-group"><label>Semana 1 ${pref}${suf}</label><input type="number" id="f-rw1" value="${w1}" step="any"></div>
+            <div class="form-group"><label>Semana 2 ${pref}${suf}</label><input type="number" id="f-rw2" value="${w2}" step="any"></div>
+            <div class="form-group"><label>Semana 3 ${pref}${suf}</label><input type="number" id="f-rw3" value="${w3}" step="any"></div>
+            <div class="form-group"><label>Semana 4 ${pref}${suf}</label><input type="number" id="f-rw4" value="${w4}" step="any"></div>
+            <div class="form-group"><label>Remainder ${pref}${suf}</label><input type="number" id="f-rw5" value="${w5}" step="any"></div>
+            <div class="form-group"><label>Monthly Target ${pref}${suf}</label><input type="number" id="f-rtarget" value="${target}" step="any"></div>
         </div>
-        <div class="form-group">
-            <label>Actual ${prefix}${suffix}</label>
-            <input type="number" id="f-ram-actual" value="${actualVal}" step="any" placeholder="Resultado real">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px;">
+            <div class="form-group">
+                <label>Status</label>
+                <select id="f-rstatus" style="width:100%;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);">
+                    <option value="" ${!status?'selected':''}>Auto</option>
+                    <option value="green" ${status==='green'?'selected':''}>🟢 Green</option>
+                    <option value="light-green" ${status==='light-green'?'selected':''}>🟢 Light Green</option>
+                    <option value="yellow" ${status==='yellow'?'selected':''}>🟡 Yellow</option>
+                    <option value="red" ${status==='red'?'selected':''}>🔴 Red</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Metric Owner</label><input type="text" id="f-rowner" value="${owner}" placeholder="Ej: Damaso"></div>
+            <div class="form-group"><label>Metric Source</label><input type="text" id="f-rsource" value="${source}" placeholder="Ej: Mercury"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+            <div class="form-group"><label>Nota Semana 1-2</label><textarea id="f-rnote1" rows="2" style="width:100%;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);resize:vertical;">${note1}</textarea></div>
+            <div class="form-group"><label>Nota Semana 3-4</label><textarea id="f-rnote2" rows="2" style="width:100%;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);resize:vertical;">${note2}</textarea></div>
+        </div>
+        <div style="margin-top:10px;padding:10px;background:rgba(255,255,255,.03);border-radius:8px;">
+            <span style="color:var(--text-muted);font-size:12px;">Tipo: <strong>${metricType === 'avg' ? 'Promedio' : 'Total'}</strong> — Monthly Actual se calcula automáticamente</span>
         </div>
     `, () => {
-        const p = document.getElementById('f-ram-plan').value;
-        const a = document.getElementById('f-ram-actual').value;
-        if (p !== '') setRAMValue(metricId, month, 'plan', parseFloat(p));
-        if (a !== '') setRAMValue(metricId, month, 'actual', parseFloat(a));
+        const fields = {w1:'f-rw1',w2:'f-rw2',w3:'f-rw3',w4:'f-rw4',w5:'f-rw5',target:'f-rtarget'};
+        for (const [k,id] of Object.entries(fields)) {
+            const v = document.getElementById(id).value;
+            sv(metricId, k, v !== '' ? parseFloat(v) : null);
+        }
+        sv(metricId, 'status', document.getElementById('f-rstatus').value);
+        sv(metricId, 'owner', document.getElementById('f-rowner').value);
+        sv(metricId, 'source', document.getElementById('f-rsource').value);
+        sv(metricId, 'note1', document.getElementById('f-rnote1').value);
+        sv(metricId, 'note2', document.getElementById('f-rnote2').value);
         closeModal();
         renderRAM();
     });
@@ -2789,52 +2867,95 @@ function renderRAM() {
         return;
     }
     const year = state.ramYear || new Date().getFullYear();
-    const currentMonth = new Date().getMonth(); // 0-indexed
+    const month = state.ramMonth !== undefined ? state.ramMonth : new Date().getMonth();
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
 
-    let headerRow1 = '<th style="min-width:180px;">Métrica</th>';
-    let headerRow2 = '<th></th>';
+    // Month tabs
+    let monthTabs = '';
     for (let m = 0; m < 12; m++) {
-        const isCurrent = (m === currentMonth && year === new Date().getFullYear());
-        headerRow1 += `<th class="month-header" colspan="2" ${isCurrent ? 'style="color:var(--blue);border-bottom:2px solid var(--blue);"' : ''}>${MONTHS[m]}</th>`;
-        headerRow2 += `<th class="sub-header plan-col" style="border-left:2px solid var(--border);">Plan</th><th class="sub-header actual-col">Real</th>`;
+        const isActive = m === month;
+        const isCurrent = m === currentMonth && year === currentYear;
+        monthTabs += `<button class="view-tab ${isActive ? 'active' : ''}"
+            onclick="state.ramMonth=${m};saveState();renderRAM();"
+            style="${isCurrent && !isActive ? 'border:1px solid var(--blue);' : ''} ${isActive ? '' : ''}"
+            >${MONTHS_SHORT[m]}</button>`;
     }
 
+    // Table rows
     let rows = '';
     for (const section of RAM_SECTIONS) {
-        rows += `<tr class="section-row"><td colspan="25">${section.name}</td></tr>`;
+        rows += `<tr class="section-row"><td colspan="12" style="border-left:3px solid ${section.color};">${section.name}</td></tr>`;
         for (const metric of section.metrics) {
-            rows += `<tr><td class="metric-name">${metric.name}</td>`;
-            for (let m = 0; m < 12; m++) {
-                const plan = getRAMValue(metric.id, m, 'plan');
-                const actual = getRAMValue(metric.id, m, 'actual');
-                const status = getRAMCellStatus(metric.id, m, metric);
-                const isCurrent = (m === currentMonth && year === new Date().getFullYear());
-                const currentClass = isCurrent ? ' current-month' : '';
-                rows += `<td class="month-cell plan-cell${currentClass}" onclick="showEditRAMCell('${metric.id}','${metric.name}',${m},'${metric.format}')" style="border-left:2px solid var(--border);">${formatRAMValue(plan, metric.format)}</td>`;
-                rows += `<td class="month-cell actual-cell ${status}${currentClass}" onclick="showEditRAMCell('${metric.id}','${metric.name}',${m},'${metric.format}')">${formatRAMValue(actual, metric.format)}</td>`;
-            }
-            rows += '</tr>';
+            const w1 = rv(metric.id, 'w1');
+            const w2 = rv(metric.id, 'w2');
+            const w3 = rv(metric.id, 'w3');
+            const w4 = rv(metric.id, 'w4');
+            const w5 = rv(metric.id, 'w5');
+            const target = rv(metric.id, 'target');
+            const actual = calcMonthlyActual(metric.id, metric.type);
+            const owner = rv(metric.id, 'owner') || '';
+            const source = rv(metric.id, 'source') || '';
+            const note1 = rv(metric.id, 'note1') || '';
+            const statusColor = getStatusColor(metric.id, metric);
+            const typeLabel = metric.type === 'avg' ? 'Avg' : 'Total';
+
+            rows += `<tr class="editable" onclick="showEditRAMRow('${metric.id}','${metric.name.replace(/'/g,"\\'")}','${metric.format}','${metric.type}')">
+                <td class="metric-name">${metric.name}</td>
+                <td class="month-cell">${fmtRAM(w1, metric.format)}</td>
+                <td class="month-cell">${fmtRAM(w2, metric.format)}</td>
+                <td class="month-cell">${fmtRAM(w3, metric.format)}</td>
+                <td class="month-cell">${fmtRAM(w4, metric.format)}</td>
+                <td class="month-cell" style="border-right:2px solid var(--border);">${fmtRAM(w5, metric.format)}</td>
+                <td class="month-cell" style="font-size:11px;color:var(--text-muted);">${typeLabel}</td>
+                <td class="month-cell actual-cell" style="font-weight:700;font-size:14px;">${fmtRAM(actual, metric.format)}</td>
+                <td class="month-cell plan-cell">${fmtRAM(target, metric.format)}</td>
+                <td class="month-cell" style="text-align:center;">${statusBadge(statusColor)}</td>
+                <td class="month-cell" style="font-size:11px;color:var(--text-muted);">${owner}</td>
+                <td class="month-cell" style="font-size:11px;color:var(--text-muted);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${note1}">${note1 ? '📝' : ''}</td>
+            </tr>`;
         }
     }
 
     document.getElementById('section-ram').innerHTML = `
-        <div class="section-header">
-            <div class="section-title" style="gap:16px;">
+        <div class="section-header" style="flex-wrap:wrap;gap:12px;">
+            <div class="section-title" style="gap:12px;">
                 <span class="dot" style="background:var(--purple);"></span>
-                CEO Dashboard — RAM
+                CEO Dashboard
                 <span class="ram-year-badge">${year}</span>
-                <button class="nav-btn" onclick="navRAMYear(-1)" title="Año anterior">&larr;</button>
-                <button class="nav-btn" onclick="navRAMYear(1)" title="Año siguiente">&rarr;</button>
+                <button class="nav-btn" onclick="navRAMYear(-1)">&larr;</button>
+                <button class="nav-btn" onclick="navRAMYear(1)">&rarr;</button>
             </div>
             <div class="ram-admin-lock unlocked" onclick="lockAdmin()">
-                🔓 Admin activo — Click para bloquear
+                🔓 Admin activo
             </div>
         </div>
-        <div class="ram-container" style="max-height: calc(100vh - 180px); overflow-y: auto;">
+        <div style="margin-bottom:14px;">
+            <div class="view-switcher" style="flex-wrap:wrap;">
+                ${monthTabs}
+            </div>
+        </div>
+        <div style="margin-bottom:10px;display:flex;align-items:center;gap:16px;">
+            <h2 style="font-size:20px;font-weight:800;margin:0;">${MONTHS_FULL[month]} / ${year}</h2>
+            <span style="color:var(--text-muted);font-size:13px;">Click en cualquier fila para editar semanas, target, status y notas</span>
+        </div>
+        <div class="ram-container" style="max-height: calc(100vh - 260px); overflow-y: auto;">
             <table class="ram-table">
                 <thead>
-                    <tr>${headerRow1}</tr>
-                    <tr>${headerRow2}</tr>
+                    <tr>
+                        <th style="min-width:200px;">Métrica</th>
+                        <th style="text-align:center;">S1</th>
+                        <th style="text-align:center;">S2</th>
+                        <th style="text-align:center;">S3</th>
+                        <th style="text-align:center;">S4</th>
+                        <th style="text-align:center;border-right:2px solid var(--border);">Rem</th>
+                        <th style="text-align:center;font-size:10px;">Tipo</th>
+                        <th style="text-align:center;color:var(--green);">Actual</th>
+                        <th style="text-align:center;color:var(--blue);">Target</th>
+                        <th style="text-align:center;">Status</th>
+                        <th style="text-align:center;">Owner</th>
+                        <th style="text-align:center;">Notas</th>
+                    </tr>
                 </thead>
                 <tbody>${rows}</tbody>
             </table>
