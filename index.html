@@ -579,6 +579,87 @@
         ::-webkit-scrollbar-track { background: var(--bg); }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
+        /* ===== VIEW SWITCHER ===== */
+        .view-switcher {
+            display: flex; gap: 4px; background: rgba(255,255,255,.04);
+            border-radius: 10px; padding: 3px; border: 1px solid var(--border);
+        }
+        .view-tab {
+            padding: 6px 16px; border-radius: 8px; border: none;
+            background: none; color: var(--text-muted); cursor: pointer;
+            font-size: 12px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: .5px; transition: all .2s; white-space: nowrap;
+        }
+        .view-tab:hover { color: var(--text); }
+        .view-tab.active { background: var(--blue); color: #fff; }
+
+        /* ===== RAM TABLE ===== */
+        .ram-container { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+        .ram-table {
+            width: 100%; border-collapse: collapse; font-size: 13px; min-width: 1200px;
+        }
+        .ram-table thead th {
+            background: #1e2130; color: var(--text-muted); font-size: 11px;
+            text-transform: uppercase; letter-spacing: .5px; padding: 10px 12px;
+            border-bottom: 2px solid var(--border); position: sticky; top: 0; z-index: 2;
+            white-space: nowrap;
+        }
+        .ram-table thead th.month-header {
+            text-align: center; border-left: 2px solid var(--border);
+        }
+        .ram-table thead th.sub-header {
+            font-size: 10px; color: var(--text-muted); padding: 4px 8px;
+        }
+        .ram-table thead th.sub-header.plan-col { color: var(--blue); }
+        .ram-table thead th.sub-header.actual-col { color: var(--green); }
+        .ram-table tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); }
+        .ram-table tbody tr:hover { background: rgba(255,255,255,.02); }
+        .ram-table tbody tr.section-row {
+            background: linear-gradient(90deg, rgba(41,121,255,.08), transparent);
+        }
+        .ram-table tbody tr.section-row td {
+            font-weight: 700; font-size: 12px; text-transform: uppercase;
+            letter-spacing: 1px; color: var(--blue); padding: 12px; border: none;
+        }
+        .ram-table td {
+            padding: 8px 12px; border-right: 1px solid rgba(255,255,255,.03);
+            vertical-align: middle;
+        }
+        .ram-table td.metric-name {
+            font-weight: 600; color: var(--text); white-space: nowrap;
+            position: sticky; left: 0; background: var(--bg); z-index: 1;
+            min-width: 180px; border-right: 1px solid var(--border);
+        }
+        .ram-table td.month-cell {
+            text-align: center; cursor: pointer; border-left: 1px solid rgba(255,255,255,.03);
+            transition: background .15s; min-width: 70px; font-variant-numeric: tabular-nums;
+        }
+        .ram-table td.month-cell:hover { background: rgba(255,255,255,.06); }
+        .ram-table td.month-cell.plan-cell { color: var(--text-muted); }
+        .ram-table td.month-cell.actual-cell { font-weight: 600; }
+        .ram-table td.month-cell.status-green { color: var(--green); background: rgba(0,200,83,.06); }
+        .ram-table td.month-cell.status-red { color: var(--red); background: rgba(255,61,87,.06); }
+        .ram-table td.month-cell.status-yellow { color: var(--yellow); background: rgba(255,171,0,.06); }
+        .ram-table td.month-cell.current-month {
+            border-left: 2px solid var(--blue); border-right: 2px solid var(--blue);
+        }
+        .ram-month-nav {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+        }
+        .ram-year-badge {
+            background: var(--purple); color: #fff; padding: 4px 14px;
+            border-radius: 8px; font-size: 14px; font-weight: 700;
+        }
+        .ram-admin-lock {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--red-bg); border: 1px solid rgba(255,61,87,.3);
+            padding: 8px 18px; border-radius: 10px; color: var(--red);
+            font-size: 13px; font-weight: 600; cursor: pointer;
+        }
+        .ram-admin-lock.unlocked {
+            background: var(--green-bg); border-color: rgba(0,200,83,.3); color: var(--green);
+        }
+
         /* ===== TOAST ===== */
         .toast {
             position: fixed; bottom: 30px; right: 30px; z-index: 999;
@@ -625,13 +706,18 @@
 <!-- Header -->
 <header class="header" id="header"></header>
 
-<!-- Dashboard -->
-<div class="dashboard">
+<!-- Dashboard EOS -->
+<div class="dashboard" id="view-eos">
     <div id="setup-banner"></div>
     <div class="section" id="section-pulso"></div>
     <div class="section" id="section-scorecard"></div>
     <div class="section" id="section-leaderboard"></div>
     <div class="section" id="section-fame"></div>
+</div>
+
+<!-- Dashboard CEO / RAM -->
+<div class="dashboard" id="view-ram" style="display:none;">
+    <div class="section" id="section-ram"></div>
 </div>
 
 <!-- Modal -->
@@ -2203,7 +2289,11 @@ function renderHeader() {
             <h1>Dashboard EOS</h1>
             <div class="date">Actualizado: ${getHeaderDate()}</div>
         </div>
-        <div class="header-nav">
+        <div class="view-switcher">
+            <button class="view-tab ${state.currentView !== 'ram' ? 'active' : ''}" onclick="switchView('eos')">Dashboard EOS</button>
+            <button class="view-tab ${state.currentView === 'ram' ? 'active' : ''}" onclick="switchView('ram')">CEO Dashboard</button>
+        </div>
+        <div class="header-nav" ${state.currentView === 'ram' ? 'style="display:none"' : ''}>
             <div class="nav-group">
                 <label>Trimestre</label>
                 <button class="nav-btn" onclick="navQuarter(-1)">&larr;</button>
@@ -2574,15 +2664,224 @@ function dismissSetup() {
 }
 
 // =====================================================================
+// ===== RAM (CEO DASHBOARD) =====
+// =====================================================================
+const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const RAM_SECTIONS = [
+    { id: 'northstar', name: '⭐ North Star Metrics', metrics: [
+        { id: 'net_revenue_growth', name: 'Net Revenue Growth', format: '$' },
+        { id: 'lifetime_value', name: 'Lifetime Value (LTV)', format: '$' },
+        { id: 'cac_ltgp', name: 'CAC : LTGP', format: '%' },
+        { id: 'client_retainer_avg', name: 'Client Retainer [AVG]', format: '$' }
+    ]},
+    { id: 'evergreen', name: '🌿 Evergreen Metrics', metrics: [
+        { id: 'operating_expenses', name: 'Operating Expenses', format: '$' },
+        { id: 'be_recurring_revenue', name: 'BE Recurring Revenue', format: '$' },
+        { id: 'new_cash_collected', name: 'New Cash Collected', format: '$' },
+        { id: 'total_revenue', name: 'Total Revenue', format: '$' },
+        { id: 'net_operating_profit', name: 'Net Operating Profit $', format: '$' },
+        { id: 'net_operating_profit_pct', name: 'Net Operating Profit %', format: '%' }
+    ]},
+    { id: 'accounting', name: '📊 Accounting / Finance', metrics: [
+        { id: 'b2b_ad_spend', name: 'B2B Ad Spend', format: '$' },
+        { id: 'hiring_ad_spend', name: 'Hiring Ad Spend', format: '$' }
+    ]},
+    { id: 'marketing', name: '📣 Marketing', metrics: [
+        { id: 'cost_per_lead', name: 'Cost Per Lead', format: '$' },
+        { id: 'lead_to_schedule', name: 'Lead To Schedule %', format: '%' },
+        { id: 'demo_calls_booked', name: 'Demo Calls Booked', format: '#' },
+        { id: 'demo_call_show', name: 'Demo Call Show %', format: '%' },
+        { id: 'cost_per_offer', name: 'Cost Per Offer Made', format: '$' },
+        { id: 'cost_acquire_client', name: 'Cost to Acquire Client', format: '$' }
+    ]},
+    { id: 'sales', name: '💰 Sales', metrics: [
+        { id: 'new_clients_closed', name: 'New Clients Closed', format: '#' },
+        { id: 'call_to_close', name: 'Call To Close %', format: '%' },
+        { id: 'uf_cash', name: 'UF Cash %', format: '%' }
+    ]},
+    { id: 'client_success', name: '🤝 Client Success', metrics: [
+        { id: 'clients_lost', name: 'Clients Lost', format: '#', lowerIsBetter: true },
+        { id: 'grace_periods', name: 'Grace Periods', format: '#', lowerIsBetter: true },
+        { id: 'upsells', name: 'Upsells', format: '#' },
+        { id: 'reviews', name: 'Reviews', format: '#' }
+    ]}
+];
+
+function getRAMData() {
+    if (!state.ram) state.ram = {};
+    const year = state.ramYear || new Date().getFullYear();
+    if (!state.ram[year]) state.ram[year] = {};
+    return state.ram[year];
+}
+
+function getRAMValue(metricId, month, type) {
+    const data = getRAMData();
+    const key = `${metricId}_${month}_${type}`;
+    return data[key] !== undefined ? data[key] : null;
+}
+
+function setRAMValue(metricId, month, type, value) {
+    const data = getRAMData();
+    const key = `${metricId}_${month}_${type}`;
+    data[key] = value;
+    saveState();
+}
+
+function formatRAMValue(value, format) {
+    if (value === null || value === undefined || value === '') return '—';
+    const n = parseFloat(value);
+    if (isNaN(n)) return value;
+    if (format === '$') return n >= 1000 ? '$' + (n/1000).toFixed(1) + 'K' : '$' + n.toLocaleString();
+    if (format === '%') return n.toFixed(1) + '%';
+    return n.toLocaleString();
+}
+
+function getRAMCellStatus(metricId, month, metric) {
+    const plan = parseFloat(getRAMValue(metricId, month, 'plan'));
+    const actual = parseFloat(getRAMValue(metricId, month, 'actual'));
+    if (isNaN(plan) || isNaN(actual) || plan === 0) return '';
+    const ratio = actual / plan;
+    if (metric.lowerIsBetter) {
+        if (actual <= plan) return 'status-green';
+        if (actual <= plan * 1.2) return 'status-yellow';
+        return 'status-red';
+    }
+    if (ratio >= 0.9) return 'status-green';
+    if (ratio >= 0.7) return 'status-yellow';
+    return 'status-red';
+}
+
+function showEditRAMCell(metricId, metricName, month, format) {
+    if (!isAdmin()) { promptAdminPin(); return; }
+    const monthName = MONTHS[month];
+    const planVal = getRAMValue(metricId, month, 'plan') || '';
+    const actualVal = getRAMValue(metricId, month, 'actual') || '';
+    const prefix = format === '$' ? '$' : '';
+    const suffix = format === '%' ? '%' : '';
+    openModal(`${metricName} — ${monthName}`, `
+        <div class="form-group">
+            <label>Plan ${prefix}${suffix}</label>
+            <input type="number" id="f-ram-plan" value="${planVal}" step="any" placeholder="Meta planificada">
+        </div>
+        <div class="form-group">
+            <label>Actual ${prefix}${suffix}</label>
+            <input type="number" id="f-ram-actual" value="${actualVal}" step="any" placeholder="Resultado real">
+        </div>
+    `, () => {
+        const p = document.getElementById('f-ram-plan').value;
+        const a = document.getElementById('f-ram-actual').value;
+        if (p !== '') setRAMValue(metricId, month, 'plan', parseFloat(p));
+        if (a !== '') setRAMValue(metricId, month, 'actual', parseFloat(a));
+        closeModal();
+        renderRAM();
+    });
+}
+
+function renderRAM() {
+    if (!isAdmin()) {
+        document.getElementById('section-ram').innerHTML = `
+            <div class="empty-state" style="padding:80px 20px;">
+                <div class="empty-icon">🔒</div>
+                <p style="font-size:18px;margin-bottom:12px;">CEO Dashboard — Acceso Restringido</p>
+                <p style="color:var(--text-muted);margin-bottom:20px;">Necesitas tu PIN de admin para ver esta información.</p>
+                <button class="btn btn-primary" onclick="promptAdminPin()">Ingresar PIN</button>
+            </div>`;
+        return;
+    }
+    const year = state.ramYear || new Date().getFullYear();
+    const currentMonth = new Date().getMonth(); // 0-indexed
+
+    let headerRow1 = '<th style="min-width:180px;">Métrica</th>';
+    let headerRow2 = '<th></th>';
+    for (let m = 0; m < 12; m++) {
+        const isCurrent = (m === currentMonth && year === new Date().getFullYear());
+        headerRow1 += `<th class="month-header" colspan="2" ${isCurrent ? 'style="color:var(--blue);border-bottom:2px solid var(--blue);"' : ''}>${MONTHS[m]}</th>`;
+        headerRow2 += `<th class="sub-header plan-col" style="border-left:2px solid var(--border);">Plan</th><th class="sub-header actual-col">Real</th>`;
+    }
+
+    let rows = '';
+    for (const section of RAM_SECTIONS) {
+        rows += `<tr class="section-row"><td colspan="25">${section.name}</td></tr>`;
+        for (const metric of section.metrics) {
+            rows += `<tr><td class="metric-name">${metric.name}</td>`;
+            for (let m = 0; m < 12; m++) {
+                const plan = getRAMValue(metric.id, m, 'plan');
+                const actual = getRAMValue(metric.id, m, 'actual');
+                const status = getRAMCellStatus(metric.id, m, metric);
+                const isCurrent = (m === currentMonth && year === new Date().getFullYear());
+                const currentClass = isCurrent ? ' current-month' : '';
+                rows += `<td class="month-cell plan-cell${currentClass}" onclick="showEditRAMCell('${metric.id}','${metric.name}',${m},'${metric.format}')" style="border-left:2px solid var(--border);">${formatRAMValue(plan, metric.format)}</td>`;
+                rows += `<td class="month-cell actual-cell ${status}${currentClass}" onclick="showEditRAMCell('${metric.id}','${metric.name}',${m},'${metric.format}')">${formatRAMValue(actual, metric.format)}</td>`;
+            }
+            rows += '</tr>';
+        }
+    }
+
+    document.getElementById('section-ram').innerHTML = `
+        <div class="section-header">
+            <div class="section-title" style="gap:16px;">
+                <span class="dot" style="background:var(--purple);"></span>
+                CEO Dashboard — RAM
+                <span class="ram-year-badge">${year}</span>
+                <button class="nav-btn" onclick="navRAMYear(-1)" title="Año anterior">&larr;</button>
+                <button class="nav-btn" onclick="navRAMYear(1)" title="Año siguiente">&rarr;</button>
+            </div>
+            <div class="ram-admin-lock unlocked" onclick="lockAdmin()">
+                🔓 Admin activo — Click para bloquear
+            </div>
+        </div>
+        <div class="ram-container" style="max-height: calc(100vh - 180px); overflow-y: auto;">
+            <table class="ram-table">
+                <thead>
+                    <tr>${headerRow1}</tr>
+                    <tr>${headerRow2}</tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+function navRAMYear(delta) {
+    if (!state.ramYear) state.ramYear = new Date().getFullYear();
+    state.ramYear += delta;
+    saveState();
+    renderRAM();
+}
+
+// =====================================================================
+// ===== VIEW SWITCHING =====
+// =====================================================================
+function switchView(view) {
+    if (view === 'ram' && !isAdmin()) {
+        promptAdminPin();
+        return;
+    }
+    state.currentView = view;
+    document.getElementById('view-eos').style.display = view === 'eos' ? 'block' : 'none';
+    document.getElementById('view-ram').style.display = view === 'ram' ? 'block' : 'none';
+    renderHeader();
+    if (view === 'ram') renderRAM();
+    saveState();
+}
+
+// =====================================================================
 // ===== RENDER ALL =====
 // =====================================================================
 function renderAll() {
     renderHeader();
-    renderSetupBanner();
-    renderPulso();
-    renderScorecard();
-    renderLeaderboard();
-    renderFameWall();
+    const view = state.currentView || 'eos';
+    document.getElementById('view-eos').style.display = view === 'eos' ? 'block' : 'none';
+    document.getElementById('view-ram').style.display = view === 'ram' ? 'block' : 'none';
+    if (view === 'eos') {
+        renderSetupBanner();
+        renderPulso();
+        renderScorecard();
+        renderLeaderboard();
+        renderFameWall();
+    } else {
+        renderRAM();
+    }
     updateSyncUI();
 }
 
