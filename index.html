@@ -873,8 +873,9 @@ async function loadFromCloud() {
         updateSyncUI();
         const qk = getQuarterKey(state.currentYear, state.currentQuarter);
 
-        // Load all tables in parallel
-        const [configRes, membersRes, pulsoRes, rocksRes, metricsRes, resultsRes, lbRes, fameRes] = await Promise.all([
+        // Load all tables in parallel (EOS + CEO Dashboard)
+        const [configRes, membersRes, pulsoRes, rocksRes, metricsRes, resultsRes, lbRes, fameRes,
+               ramSectionsRes, ramMetricsRes, ramDataRes] = await Promise.all([
             supabase.from('dashboard_config').select('*').eq('id', 'main').single(),
             supabase.from('team_members').select('*'),
             supabase.from('pulso').select('*').eq('quarter_key', qk).maybeSingle(),
@@ -882,7 +883,10 @@ async function loadFromCloud() {
             supabase.from('scorecard_metrics').select('*').eq('quarter_key', qk).order('sort_order'),
             supabase.from('scorecard_results').select('*'),
             supabase.from('leaderboard_entries').select('*').eq('quarter_key', qk),
-            supabase.from('fame_wall').select('*').eq('quarter_key', qk)
+            supabase.from('fame_wall').select('*').eq('quarter_key', qk),
+            supabase.from('ram_sections').select('*').order('sort_order'),
+            supabase.from('ram_metrics').select('*').order('sort_order'),
+            supabase.from('ram_data').select('*')
         ]);
 
         // Check for critical errors
@@ -941,6 +945,43 @@ async function loadFromCloud() {
                 retentionMonths: f.retention_months, roas: Number(f.roas),
                 addedDate: f.added_date
             }));
+        }
+
+        // ── CEO Dashboard RAM: rebuild sections from DB ──
+        if (ramSectionsRes.data && ramSectionsRes.data.length > 0) {
+            const metricsMap = {};
+            (ramMetricsRes.data || []).forEach(m => {
+                if (!metricsMap[m.section_id]) metricsMap[m.section_id] = [];
+                metricsMap[m.section_id].push({
+                    id: m.id, name: m.name, format: m.format,
+                    type: m.type, lowerIsBetter: m.lower_is_better, sort_order: m.sort_order
+                });
+            });
+            state.ramSections = ramSectionsRes.data.map(s => ({
+                id: s.id, name: s.name, color: s.color, sort_order: s.sort_order,
+                metrics: (metricsMap[s.id] || []).sort((a,b) => a.sort_order - b.sort_order)
+            }));
+        }
+
+        // ── CEO Dashboard RAM: rebuild weekly data ──
+        if (ramDataRes.data && ramDataRes.data.length > 0) {
+            if (!state.ram) state.ram = {};
+            ramDataRes.data.forEach(d => {
+                const key = `${d.year}-${d.month}`;
+                if (!state.ram[key]) state.ram[key] = {};
+                const mid = d.metric_id;
+                if (d.week1 !== null) state.ram[key][`${mid}_w1`] = d.week1;
+                if (d.week2 !== null) state.ram[key][`${mid}_w2`] = d.week2;
+                if (d.week3 !== null) state.ram[key][`${mid}_w3`] = d.week3;
+                if (d.week4 !== null) state.ram[key][`${mid}_w4`] = d.week4;
+                if (d.remainder !== null) state.ram[key][`${mid}_w5`] = d.remainder;
+                if (d.monthly_target !== null) state.ram[key][`${mid}_target`] = d.monthly_target;
+                if (d.status) state.ram[key][`${mid}_status`] = d.status;
+                if (d.metric_owner) state.ram[key][`${mid}_owner`] = d.metric_owner;
+                if (d.metric_source) state.ram[key][`${mid}_source`] = d.metric_source;
+                if (d.note_week1_2) state.ram[key][`${mid}_note1`] = d.note_week1_2;
+                if (d.note_week3_4) state.ram[key][`${mid}_note2`] = d.note_week3_4;
+            });
         }
 
         localStorage.setItem('eos_dashboard', JSON.stringify(state));
@@ -1043,6 +1084,55 @@ async function saveToCloud() {
                     added_date: f.addedDate || null
                 })), { onConflict: 'id' }
             );
+        }
+
+        // ── CEO Dashboard: RAM sections & metrics structure ──
+        const ramSections = state.ramSections || [];
+        if (ramSections.length > 0) {
+            await supabase.from('ram_sections').upsert(
+                ramSections.map((s, i) => ({ id: s.id, name: s.name, color: s.color, sort_order: i })),
+                { onConflict: 'id' }
+            );
+            const allMetrics = [];
+            ramSections.forEach((s, si) => {
+                (s.metrics || []).forEach((m, mi) => {
+                    allMetrics.push({ id: m.id, section_id: s.id, name: m.name, format: m.format,
+                        type: m.type, lower_is_better: !!m.lowerIsBetter, sort_order: mi });
+                });
+            });
+            if (allMetrics.length > 0) {
+                await supabase.from('ram_metrics').upsert(allMetrics, { onConflict: 'id' });
+            }
+        }
+
+        // ── CEO Dashboard: RAM weekly data ──
+        const ramEntries = [];
+        Object.entries(state.ram || {}).forEach(([yearMonth, data]) => {
+            const [year, monthStr] = yearMonth.split('-');
+            const month = parseInt(monthStr);
+            // Group keys by metricId
+            const metricIds = new Set();
+            Object.keys(data).forEach(k => metricIds.add(k.split('_').slice(0, -1).join('_')));
+            metricIds.forEach(metricId => {
+                ramEntries.push({
+                    id: `${metricId}_${year}_${month}`,
+                    metric_id: metricId, year: parseInt(year), month,
+                    week1: data[`${metricId}_w1`] ?? null,
+                    week2: data[`${metricId}_w2`] ?? null,
+                    week3: data[`${metricId}_w3`] ?? null,
+                    week4: data[`${metricId}_w4`] ?? null,
+                    remainder: data[`${metricId}_w5`] ?? null,
+                    monthly_target: data[`${metricId}_target`] ?? null,
+                    status: data[`${metricId}_status`] || null,
+                    metric_owner: data[`${metricId}_owner`] || null,
+                    metric_source: data[`${metricId}_source`] || null,
+                    note_week1_2: data[`${metricId}_note1`] || null,
+                    note_week3_4: data[`${metricId}_note2`] || null
+                });
+            });
+        });
+        if (ramEntries.length > 0) {
+            await supabase.from('ram_data').upsert(ramEntries, { onConflict: 'id' });
         }
 
         syncStatus = 'connected';

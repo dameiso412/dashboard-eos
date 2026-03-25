@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Documentation — Dashboard EOS + CEO Dashboard</title>
+<style>
+:root {
+    --bg: #0f1117; --card: #1a1d27; --border: #2a2e3a;
+    --text: #e4e6eb; --muted: #8b8fa3;
+    --green: #00c853; --blue: #2979ff; --purple: #7c4dff;
+    --red: #ff3d57; --yellow: #ffab00; --gold: #ffd700;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace, sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.6; }
+.header {
+    background: linear-gradient(135deg,#1a1d27,#252838);
+    border-bottom:1px solid var(--border); padding:20px 40px;
+    display:flex; align-items:center; justify-content:space-between;
+}
+.header h1 { font-size:22px; font-weight:800;
+    background:linear-gradient(135deg,#fff,#a0a4b8);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.header .badge { background:var(--green); color:#fff; padding:4px 12px;
+    border-radius:20px; font-size:12px; font-weight:700; }
+.layout { display:flex; min-height:calc(100vh - 65px); }
+.sidebar {
+    width:260px; min-width:260px; background:var(--card);
+    border-right:1px solid var(--border); padding:24px 0;
+    position:sticky; top:0; height:calc(100vh - 65px); overflow-y:auto;
+}
+.sidebar h3 { font-size:11px; text-transform:uppercase; letter-spacing:1px;
+    color:var(--muted); padding:8px 20px 4px; }
+.sidebar a { display:block; padding:7px 20px; color:var(--muted); text-decoration:none;
+    font-size:13px; transition:all .15s; border-left:3px solid transparent; }
+.sidebar a:hover { color:var(--text); background:rgba(255,255,255,.03); }
+.sidebar a.active { color:var(--blue); border-left-color:var(--blue);
+    background:rgba(41,121,255,.06); }
+.content { flex:1; padding:40px; max-width:900px; }
+h2 { font-size:26px; font-weight:800; margin-bottom:8px; padding-top:20px; }
+h3 { font-size:16px; font-weight:700; margin:28px 0 10px;
+    color:var(--blue); border-bottom:1px solid var(--border); padding-bottom:6px; }
+h4 { font-size:13px; font-weight:700; margin:16px 0 6px; text-transform:uppercase;
+    letter-spacing:.5px; color:var(--muted); }
+p { color:#c5c8d4; margin-bottom:12px; font-size:14px; }
+.intro-box {
+    background:rgba(41,121,255,.08); border:1px solid rgba(41,121,255,.2);
+    border-radius:12px; padding:18px 22px; margin:16px 0 24px;
+}
+.intro-box p { margin:0; font-size:13px; }
+code { background:rgba(255,255,255,.06); border:1px solid var(--border);
+    padding:2px 7px; border-radius:5px; font-family:monospace; font-size:13px; color:#e0d7ff; }
+pre {
+    background:#12141e; border:1px solid var(--border); border-radius:10px;
+    padding:18px 20px; overflow-x:auto; margin:10px 0 18px;
+    font-size:13px; line-height:1.7;
+}
+pre code { background:none; border:none; padding:0; color:#c9d1d9; }
+.kw { color:#ff7b72; }  /* keywords */
+.str { color:#a5d6ff; } /* strings */
+.num { color:#79c0ff; } /* numbers */
+.cmt { color:#8b949e; } /* comments */
+.key { color:#d2a8ff; } /* keys */
+.method { display:inline-block; padding:3px 10px; border-radius:5px;
+    font-size:12px; font-weight:700; margin-right:8px; font-family:monospace; }
+.GET { background:rgba(0,200,83,.15); color:var(--green); }
+.POST { background:rgba(41,121,255,.15); color:var(--blue); }
+.PATCH { background:rgba(255,171,0,.15); color:var(--yellow); }
+.DELETE { background:rgba(255,61,87,.15); color:var(--red); }
+.endpoint {
+    background:var(--card); border:1px solid var(--border); border-radius:10px;
+    padding:16px 20px; margin:12px 0;
+}
+.endpoint-title { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.endpoint-title code { font-size:13px; background:rgba(255,255,255,.04); }
+.endpoint p { margin:4px 0; font-size:13px; color:var(--muted); }
+.table-schema {
+    width:100%; border-collapse:collapse; font-size:13px; margin:10px 0 20px;
+}
+.table-schema th {
+    background:#1e2130; color:var(--muted); font-size:11px;
+    text-transform:uppercase; letter-spacing:.5px; padding:8px 12px;
+    text-align:left; border-bottom:2px solid var(--border);
+}
+.table-schema td {
+    padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.04);
+    vertical-align:top;
+}
+.table-schema tr:hover td { background:rgba(255,255,255,.02); }
+.type { color:var(--purple); font-family:monospace; font-size:12px; }
+.req { color:var(--red); font-size:11px; font-weight:700; }
+.opt { color:var(--muted); font-size:11px; }
+.section-tag {
+    display:inline-block; padding:2px 8px; border-radius:4px;
+    font-size:11px; font-weight:700; margin-bottom:6px;
+}
+.eos-tag { background:rgba(0,200,83,.15); color:var(--green); }
+.ceo-tag { background:rgba(124,77,255,.15); color:var(--purple); }
+.both-tag { background:rgba(255,171,0,.15); color:var(--yellow); }
+.divider { border:none; border-top:1px solid var(--border); margin:36px 0; }
+.toc-num { color:var(--muted); margin-right:6px; font-size:12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div>
+        <h1>📡 API Documentation</h1>
+        <p style="color:var(--muted);font-size:13px;margin-top:2px;">Dashboard EOS + CEO Dashboard — Bidirectional REST API</p>
+    </div>
+    <span class="badge">v1.0 · Live</span>
+</div>
+
+<div class="layout">
+<nav class="sidebar">
+    <h3>Getting Started</h3>
+    <a href="#overview">Overview</a>
+    <a href="#auth">Authentication</a>
+    <a href="#base-url">Base URL</a>
+    <a href="#conventions">Conventions</a>
+
+    <h3>EOS Dashboard</h3>
+    <a href="#config">Dashboard Config</a>
+    <a href="#team">Team Members</a>
+    <a href="#pulso">Pulso (Revenue)</a>
+    <a href="#rocks">Rocks</a>
+    <a href="#scorecard">Scorecard Metrics</a>
+    <a href="#scorecard-results">Scorecard Results</a>
+    <a href="#leaderboard">Leaderboard</a>
+    <a href="#fame">Fame Wall</a>
+
+    <h3>CEO Dashboard</h3>
+    <a href="#ram-sections">RAM Sections</a>
+    <a href="#ram-metrics">RAM Metrics</a>
+    <a href="#ram-data">RAM Weekly Data</a>
+
+    <h3>Examples</h3>
+    <a href="#ex-read-all">Read Full State</a>
+    <a href="#ex-update-revenue">Update Revenue</a>
+    <a href="#ex-update-ram">Update RAM Week</a>
+    <a href="#ex-add-rock">Add Rock</a>
+    <a href="#ex-ai-agent">AI Agent Pattern</a>
+</nav>
+
+<div class="content">
+
+<!-- ═══════════════════════════════════════ OVERVIEW ═══════ -->
+<section id="overview">
+<h2>Overview</h2>
+<div class="intro-box">
+    <p>This API gives any AI system or external tool <strong>full bidirectional access</strong> to all data in the EOS Dashboard and CEO Dashboard. Built on Supabase PostgREST — every table is a REST endpoint. No backend required.</p>
+</div>
+<p>The platform stores two types of data:</p>
+<ul style="color:#c5c8d4;font-size:14px;padding-left:20px;margin-bottom:16px;">
+    <li><strong style="color:var(--green);">EOS Dashboard</strong> — quarterly rocks, weekly scorecard, leaderboard, fame wall, revenue/utility pulso, team members</li>
+    <li><strong style="color:var(--purple);">CEO Dashboard</strong> — monthly RAM with weekly breakdowns per metric (fully customizable sections & metrics)</li>
+</ul>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════ AUTH ═══════ -->
+<section id="auth">
+<h2>Authentication</h2>
+<p>All requests require an <code>apikey</code> header with the Supabase anon key, and an <code>Authorization: Bearer</code> header with the same value.</p>
+
+<h4>Headers (required on every request)</h4>
+<pre><code><span class="key">apikey</span>: <span class="str">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkeGR2bGpyaHRwbWt1eHdsd3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzc4MzUsImV4cCI6MjA4OTk1MzgzNX0.VSWZ862E0QqkXOzAPjJLANs_1y55KP0K3ErLj5Zae44</span>
+<span class="key">Authorization</span>: <span class="str">Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkeGR2bGpyaHRwbWt1eHdsd3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzc4MzUsImV4cCI6MjA4OTk1MzgzNX0.VSWZ862E0QqkXOzAPjJLANs_1y55KP0K3ErLj5Zae44</span>
+<span class="key">Content-Type</span>: <span class="str">application/json</span>
+<span class="key">Prefer</span>: <span class="str">return=representation</span>  <span class="cmt">// include for POST/PATCH to get the saved record back</span></code></pre>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════ BASE URL ═══════ -->
+<section id="base-url">
+<h2>Base URL</h2>
+<pre><code><span class="str">https://zdxdvljrhtpmkuxwlwrm.supabase.co/rest/v1</span></code></pre>
+<p>All endpoints below are appended to this base URL.</p>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════ CONVENTIONS ═══════ -->
+<section id="conventions">
+<h2>Conventions</h2>
+<h4>Query Filters</h4>
+<pre><code><span class="cmt">// Filter: eq, neq, gt, gte, lt, lte, like, in</span>
+?quarter_key=<span class="str">eq.2026-Q1</span>
+?year=<span class="str">eq.2026</span>&amp;month=<span class="str">eq.2</span>       <span class="cmt">// March (0-indexed)</span>
+?id=<span class="str">in.(id1,id2,id3)</span>
+
+<span class="cmt">// Select specific columns</span>
+?select=<span class="str">id,name,status</span>
+
+<span class="cmt">// Order</span>
+?order=<span class="str">sort_order.asc</span>
+
+<span class="cmt">// Upsert (create or update by PK)</span>
+<span class="key">Prefer</span>: <span class="str">resolution=merge-duplicates</span></code></pre>
+
+<h4>Quarter Key Format</h4>
+<pre><code><span class="str">"2026-Q1"</span>  <span class="cmt">// January–March 2026</span>
+<span class="str">"2026-Q2"</span>  <span class="cmt">// April–June 2026</span>
+<span class="str">"2026-Q3"</span>  <span class="cmt">// July–September 2026</span>
+<span class="str">"2026-Q4"</span>  <span class="cmt">// October–December 2026</span></code></pre>
+
+<h4>Month Index (RAM)</h4>
+<pre><code><span class="num">0</span>=January  <span class="num">1</span>=February  <span class="num">2</span>=March  ... <span class="num">11</span>=December</code></pre>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════════════════ EOS: CONFIG ═══════ -->
+<section id="config">
+<h2>Dashboard Config</h2>
+<span class="section-tag eos-tag">EOS Dashboard</span>
+<p>Global dashboard state — current quarter, year, and week.</p>
+
+<table class="table-schema">
+<tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td><code>id</code></td><td class="type">text PK</td><td>Always <code>"main"</code></td></tr>
+<tr><td><code>current_year</code></td><td class="type">integer</td><td>e.g. 2026</td></tr>
+<tr><td><code>current_quarter</code></td><td class="type">integer</td><td>1–4</td></tr>
+<tr><td><code>current_week</code></td><td class="type">integer</td><td>1–13 within quarter</td></tr>
+</table>
+
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/dashboard_config?id=eq.main</code></div>
+    <p>Get current dashboard state (quarter, week)</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method PATCH">PATCH</span><code>/dashboard_config?id=eq.main</code></div>
+    <p>Update current quarter/week. Body: <code>{"current_quarter": 2, "current_week": 5}</code></p>
+</div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════════════════ EOS: TEAM ═══════ -->
+<section id="team">
+<h2>Team Members</h2>
+<span class="section-tag eos-tag">EOS Dashboard</span>
+<p>The four team members shown in the Leaderboard and Scorecard.</p>
+
+<table class="table-schema">
+<tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td><code>id</code></td><td class="type">text PK</td><td>e.g. <code>"tomas"</code>, <code>"nicolas"</code></td></tr>
+<tr><td><code>name</code></td><td class="type">text</td><td>Display name</td></tr>
+<tr><td><code>role</code></td><td class="type">text</td><td>Job title / position</td></tr>
+<tr><td><code>avatar</code></td><td class="type">text</td><td>Initials or URL</td></tr>
+<tr><td><code>color</code></td><td class="type">text</td><td>Hex color e.g. <code>"#2979ff"</code></td></tr>
+</table>
+
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/team_members</code></div>
+    <p>Get all team members</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/team_members?id=eq.tomas</code></div>
+    <p>Get a specific team member</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method PATCH">PATCH</span><code>/team_members?id=eq.tomas</code></div>
+    <p>Update team member. Body: <code>{"name": "Tomás", "role": "Sales Director"}</code></p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method POST">POST</span><code>/team_members</code></div>
+    <p>Add new team member</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method DELETE">DELETE</span><code>/team_members?id=eq.new-member</code></div>
+    <p>Remove a team member</p>
+</div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════════════════ EOS: PULSO ═══════ -->
+<section id="pulso">
+<h2>Pulso (Revenue & Utility)</h2>
+<span class="section-tag eos-tag">EOS Dashboard</span>
+<p>The two main financial progress bars — Monthly Revenue and Quarterly Utility.</p>
+
+<table class="table-schema">
+<tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td><code>quarter_key</code></td><td class="type">text PK</td><td><code>"2026-Q1"</code></td></tr>
+<tr><td><code>revenue_current</code></td><td class="type">numeric</td><td>Current monthly revenue</td></tr>
+<tr><td><code>revenue_goal</code></td><td class="type">numeric</td><td>Monthly revenue target</td></tr>
+<tr><td><code>utility_current</code></td><td class="type">numeric</td><td>Current quarterly utility</td></tr>
+<tr><td><code>utility_goal</code></td><td class="type">numeric</td><td>Quarterly utility target</td></tr>
+</table>
+
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/pulso?quarter_key=eq.2026-Q1</code></div>
+    <p>Get revenue and utility for Q1 2026</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method PATCH">PATCH</span><code>/pulso?quarter_key=eq.2026-Q1</code></div>
+    <p>Update revenue/utility figures. Body: <code>{"revenue_current": 87500}</code></p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method POST">POST</span><code>/pulso</code></div>
+    <p>Create pulso for a new quarter. Body: full row including <code>quarter_key</code></p>
+</div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════════════════ EOS: ROCKS ═══════ -->
+<section id="rocks">
+<h2>Rocks (Quarterly Priorities)</h2>
+<span class="section-tag eos-tag">EOS Dashboard</span>
+<p>The 3 quarterly rocks — each with milestones, owner, progress, and status.</p>
+
+<table class="table-schema">
+<tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td><code>id</code></td><td class="type">text PK</td><td>UUID or slug</td></tr>
+<tr><td><code>quarter_key</code></td><td class="type">text</td><td><code>"2026-Q1"</code></td></tr>
+<tr><td><code>name</code></td><td class="type">text</td><td>Rock title</td></tr>
+<tr><td><code>owner_id</code></td><td class="type">text</td><td>References <code>team_members.id</code></td></tr>
+<tr><td><code>status</code></td><td class="type">text</td><td><code>"on-track"</code> | <code>"off-track"</code> | <code>"complete"</code></td></tr>
+<tr><td><code>progress</code></td><td class="type">integer</td><td>0–100 (percentage)</td></tr>
+<tr><td><code>deadline</code></td><td class="type">date</td><td>ISO date e.g. <code>"2026-03-31"</code></td></tr>
+<tr><td><code>milestones</code></td><td class="type">jsonb</td><td>Array of <code>{text, done}</code> objects</td></tr>
+</table>
+
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/rocks?quarter_key=eq.2026-Q1</code></div>
+    <p>Get all rocks for Q1 2026</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/rocks?quarter_key=eq.2026-Q1&amp;status=eq.off-track</code></div>
+    <p>Get only off-track rocks</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method PATCH">PATCH</span><code>/rocks?id=eq.{rock_id}</code></div>
+    <p>Update rock. Body: <code>{"status": "on-track", "progress": 75}</code></p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method POST">POST</span><code>/rocks</code></div>
+    <p>Create a new rock</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method DELETE">DELETE</span><code>/rocks?id=eq.{rock_id}</code></div>
+    <p>Delete a rock</p>
+</div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════════════════ EOS: SCORECARD ═══════ -->
+<section id="scorecard">
+<h2>Scorecard Metrics</h2>
+<span class="section-tag eos-tag">EOS Dashboard</span>
+<p>The 13 L10 metrics tracked weekly — definition (goal, owner, direction).</p>
+
+<table class="table-schema">
+<tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td><code>id</code></td><td class="type">text PK</td><td>Metric identifier</td></tr>
+<tr><td><code>quarter_key</code></td><td class="type">text</td><td><code>"2026-Q1"</code></td></tr>
+<tr><td><code>metric</code></td><td class="type">text</td><td>Metric name</td></tr>
+<tr><td><code>owner_id</code></td><td class="type">text</td><td>References <code>team_members.id</code></td></tr>
+<tr><td><code>goal</code></td><td class="type">text</td><td>e.g. <code">&gt;80%"</code>, <code>"$50K"</code></td></tr>
+<tr><td><code>direction</code></td><td class="type">text</td><td><code>"gte"</code> | <code>"lte"</code> | <code>"eq"</code></td></tr>
+<tr><td><code>sort_order</code></td><td class="type">integer</td><td>Display order</td></tr>
+</table>
+
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/scorecard_metrics?quarter_key=eq.2026-Q1&amp;order=sort_order.asc</code></div>
+    <p>Get all 13 metrics for Q1 2026 in order</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method PATCH">PATCH</span><code>/scorecard_metrics?id=eq.{metric_id}</code></div>
+    <p>Update metric definition. Body: <code>{"goal": ">90%", "owner_id": "nicolas"}</code></p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method POST">POST</span><code>/scorecard_metrics</code></div>
+    <p>Add a new metric to the scorecard</p>
+</div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════════════════ EOS: SCORECARD RESULTS ═══════ -->
+<section id="scorecard-results">
+<h2>Scorecard Results</h2>
+<span class="section-tag eos-tag">EOS Dashboard</span>
+<p>Weekly result values for each scorecard metric. One row per metric per week.</p>
+
+<table class="table-schema">
+<tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td><code>id</code></td><td class="type">text PK</td><td>Format: <code>sr-{metric_id}-{week}</code></td></tr>
+<tr><td><code>metric_id</code></td><td class="type">text</td><td>References <code>scorecard_metrics.id</code></td></tr>
+<tr><td><code>week</code></td><td class="type">integer</td><td>1–13 within quarter</td></tr>
+<tr><td><code>result</code></td><td class="type">text</td><td>The actual value entered</td></tr>
+<tr><td><code>good</code></td><td class="type">boolean</td><td><code>true</code>=green, <code>false</code>=red</td></tr>
+</table>
+
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/scorecard_results?metric_id=eq.{metric_id}</code></div>
+    <p>Get all weekly results for a metric</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/scorecard_results?week=eq.12</code></div>
+    <p>Get all metric results for week 12</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method POST">POST</span><code>/scorecard_results</code></div>
+    <p>Create or upsert a weekly result. Body: <code>{"id":"sr-nrr-12","metric_id":"nrr","week":12,"result":"108%","good":true}</code></p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method PATCH">PATCH</span><code>/scorecard_results?id=eq.sr-nrr-12</code></div>
+    <p>Update a specific week's result</p>
+</div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════════════════ EOS: LEADERBOARD ═══════ -->
+<section id="leaderboard">
+<h2>Leaderboard</h2>
+<span class="section-tag eos-tag">EOS Dashboard</span>
+<p>Individual performance tracking — bonus status, progress vs quarterly goal.</p>
+
+<table class="table-schema">
+<tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td><code>id</code></td><td class="type">text PK</td><td>Format: <code>lb-{member_id}-{quarter_key}</code></td></tr>
+<tr><td><code>member_id</code></td><td class="type">text</td><td>References <code>team_members.id</code></td></tr>
+<tr><td><code>quarter_key</code></td><td class="type">text</td><td><code>"2026-Q1"</code></td></tr>
+<tr><td><code>metric_label</code></td><td class="type">text</td><td>e.g. <code>"NRR"</code>, <code>"ROAS"</code></td></tr>
+<tr><td><code>metric_value</code></td><td class="type">text</td><td>Current value as string</td></tr>
+<tr><td><code>progress</code></td><td class="type">numeric</td><td>0–100 (percentage toward goal)</td></tr>
+<tr><td><code>goal</code></td><td class="type">text</td><td>Target value as string</td></tr>
+</table>
+
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/leaderboard_entries?quarter_key=eq.2026-Q1</code></div>
+    <p>Get full leaderboard for Q1 2026</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method PATCH">PATCH</span><code>/leaderboard_entries?id=eq.lb-nicolas-2026-Q1</code></div>
+    <p>Update individual performance. Body: <code>{"metric_value": "112%", "progress": 92}</code></p>
+</div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════════════════ EOS: FAME WALL ═══════ -->
+<section id="fame">
+<h2>Fame Wall</h2>
+<span class="section-tag eos-tag">EOS Dashboard</span>
+<p>Clients awarded "Success Case" status — triggers a $500 team bonus.</p>
+
+<table class="table-schema">
+<tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td><code>id</code></td><td class="type">text PK</td><td>UUID or slug</td></tr>
+<tr><td><code>quarter_key</code></td><td class="type">text</td><td>Quarter when added</td></tr>
+<tr><td><code>name</code></td><td class="type">text</td><td>Client name</td></tr>
+<tr><td><code>initials</code></td><td class="type">text</td><td>2–3 char initials for avatar</td></tr>
+<tr><td><code>retention_months</code></td><td class="type">integer</td><td>Must be ≥6 to qualify</td></tr>
+<tr><td><code>roas</code></td><td class="type">numeric</td><td>Must be ≥4 to qualify</td></tr>
+<tr><td><code>added_date</code></td><td class="type">date</td><td>ISO date when added to wall</td></tr>
+</table>
+
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/fame_wall?quarter_key=eq.2026-Q1</code></div>
+    <p>Get all success cases for Q1 2026</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/fame_wall?retention_months=gte.6&amp;roas=gte.4</code></div>
+    <p>Get all clients that meet the success criteria (across all quarters)</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method POST">POST</span><code>/fame_wall</code></div>
+    <p>Add client to Fame Wall. This triggers the $500 team bonus logic in the dashboard.</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method DELETE">DELETE</span><code>/fame_wall?id=eq.{client_id}</code></div>
+    <p>Remove client from wall</p>
+</div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════════════════ CEO: RAM SECTIONS ═══════ -->
+<section id="ram-sections">
+<h2>RAM Sections</h2>
+<span class="section-tag ceo-tag">CEO Dashboard</span>
+<p>The customizable section headers in the CEO Dashboard (e.g. North Star, Evergreen, Marketing...).</p>
+
+<table class="table-schema">
+<tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td><code>id</code></td><td class="type">text PK</td><td>e.g. <code>"northstar"</code>, <code>"sec_1710000000"</code></td></tr>
+<tr><td><code>name</code></td><td class="type">text</td><td>e.g. <code>"⭐ NORTH STAR METRICS"</code></td></tr>
+<tr><td><code>color</code></td><td class="type">text</td><td>Hex color for left border</td></tr>
+<tr><td><code>sort_order</code></td><td class="type">integer</td><td>Display order (0-indexed)</td></tr>
+</table>
+
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/ram_sections?order=sort_order.asc</code></div>
+    <p>Get all sections in display order</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method POST">POST</span><code>/ram_sections</code></div>
+    <p>Add a new section. Body: <code>{"id":"growth","name":"📈 GROWTH","color":"#00c853","sort_order":7}</code></p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method PATCH">PATCH</span><code>/ram_sections?id=eq.northstar</code></div>
+    <p>Rename or recolor a section</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method DELETE">DELETE</span><code>/ram_sections?id=eq.{section_id}</code></div>
+    <p>Delete section — cascades to delete its metrics and all weekly data</p>
+</div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════════════════ CEO: RAM METRICS ═══════ -->
+<section id="ram-metrics">
+<h2>RAM Metrics</h2>
+<span class="section-tag ceo-tag">CEO Dashboard</span>
+<p>Individual metric definitions within each section — format, aggregation type, and direction.</p>
+
+<table class="table-schema">
+<tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td><code>id</code></td><td class="type">text PK</td><td>e.g. <code>"net_revenue_growth"</code></td></tr>
+<tr><td><code>section_id</code></td><td class="type">text FK</td><td>References <code>ram_sections.id</code></td></tr>
+<tr><td><code>name</code></td><td class="type">text</td><td>Display name</td></tr>
+<tr><td><code>format</code></td><td class="type">text</td><td><code>"$"</code> | <code>"%"</code> | <code>"#"</code></td></tr>
+<tr><td><code>type</code></td><td class="type">text</td><td><code>"total"</code> (sum weeks) | <code>"avg"</code> (average weeks)</td></tr>
+<tr><td><code>lower_is_better</code></td><td class="type">boolean</td><td><code>true</code> for costs/churn — lower = green</td></tr>
+<tr><td><code>sort_order</code></td><td class="type">integer</td><td>Display order within section</td></tr>
+</table>
+
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/ram_metrics?section_id=eq.northstar&amp;order=sort_order.asc</code></div>
+    <p>Get all metrics in the North Star section</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/ram_metrics?select=id,name,section_id,format,type</code></div>
+    <p>Get all metric definitions (all sections)</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method POST">POST</span><code>/ram_metrics</code></div>
+    <p>Add a metric. Body: <code>{"id":"cltv","section_id":"northstar","name":"CLTV","format":"$","type":"avg","lower_is_better":false,"sort_order":6}</code></p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method PATCH">PATCH</span><code>/ram_metrics?id=eq.{metric_id}</code></div>
+    <p>Rename, reformat, or change aggregation type</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method DELETE">DELETE</span><code>/ram_metrics?id=eq.{metric_id}</code></div>
+    <p>Delete metric — cascades to delete all its weekly data</p>
+</div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════════════════ CEO: RAM DATA ═══════ -->
+<section id="ram-data">
+<h2>RAM Weekly Data</h2>
+<span class="section-tag ceo-tag">CEO Dashboard</span>
+<p>The actual weekly numbers per metric per month/year. One row = one metric × one month.</p>
+
+<table class="table-schema">
+<tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td><code>id</code></td><td class="type">text PK</td><td>Format: <code>{metric_id}_{year}_{month}</code></td></tr>
+<tr><td><code>metric_id</code></td><td class="type">text FK</td><td>References <code>ram_metrics.id</code></td></tr>
+<tr><td><code>year</code></td><td class="type">integer</td><td>e.g. <code>2026</code></td></tr>
+<tr><td><code>month</code></td><td class="type">integer</td><td>0–11 (0=January)</td></tr>
+<tr><td><code>week1</code></td><td class="type">numeric</td><td>Week 1 value</td></tr>
+<tr><td><code>week2</code></td><td class="type">numeric</td><td>Week 2 value</td></tr>
+<tr><td><code>week3</code></td><td class="type">numeric</td><td>Week 3 value</td></tr>
+<tr><td><code>week4</code></td><td class="type">numeric</td><td>Week 4 value</td></tr>
+<tr><td><code>remainder</code></td><td class="type">numeric</td><td>Remaining days in month</td></tr>
+<tr><td><code>monthly_target</code></td><td class="type">numeric</td><td>Target for the full month</td></tr>
+<tr><td><code>status</code></td><td class="type">text</td><td><code>"green"</code> | <code>"light-green"</code> | <code>"yellow"</code> | <code>"red"</code> | null (auto)</td></tr>
+<tr><td><code>metric_owner</code></td><td class="type">text</td><td>Person responsible</td></tr>
+<tr><td><code>metric_source</code></td><td class="type">text</td><td>Where the data comes from</td></tr>
+<tr><td><code>note_week1_2</code></td><td class="type">text</td><td>Notes for weeks 1–2</td></tr>
+<tr><td><code>note_week3_4</code></td><td class="type">text</td><td>Notes for weeks 3–4</td></tr>
+</table>
+
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/ram_data?year=eq.2026&amp;month=eq.1</code></div>
+    <p>Get all metric data for February 2026 (month=1)</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/ram_data?metric_id=eq.net_revenue_growth&amp;year=eq.2026</code></div>
+    <p>Get full year data for a single metric</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method GET">GET</span><code>/ram_data?year=eq.2026&amp;month=eq.2&amp;select=metric_id,week1,week2,week3,week4,monthly_target,status</code></div>
+    <p>Get lean summary for March 2026</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method POST">POST</span><code>/ram_data</code></div>
+    <p>Create a new monthly entry</p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method PATCH">PATCH</span><code>/ram_data?id=eq.net_revenue_growth_2026_1</code></div>
+    <p>Update weekly data. Body: <code>{"week3": 8200, "status": "yellow"}</code></p>
+</div>
+<div class="endpoint">
+    <div class="endpoint-title"><span class="method POST">POST</span><code>/ram_data</code> with <code>Prefer: resolution=merge-duplicates</code></div>
+    <p>Upsert — create or update in one call. Safest for AI agents.</p>
+</div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════════════════ EXAMPLES ═══════ -->
+<section id="ex-read-all">
+<h2>Example: Read Full Dashboard State</h2>
+<span class="section-tag both-tag">Both Dashboards</span>
+<pre><code><span class="cmt">// Fetch everything needed to reconstruct both dashboards</span>
+<span class="kw">const</span> BASE = <span class="str">'https://zdxdvljrhtpmkuxwlwrm.supabase.co/rest/v1'</span>;
+<span class="kw">const</span> HEADERS = {
+  <span class="str">'apikey'</span>: <span class="str">'eyJhbGci...'</span>,
+  <span class="str">'Authorization'</span>: <span class="str">'Bearer eyJhbGci...'</span>
+};
+
+<span class="kw">const</span> [config, members, pulso, rocks, metrics, results, lb, fame,
+       ramSections, ramMetrics, ramData] = <span class="kw">await</span> Promise.all([
+  fetch(`${BASE}/dashboard_config?id=eq.main`, { headers: HEADERS }),
+  fetch(`${BASE}/team_members`, { headers: HEADERS }),
+  fetch(`${BASE}/pulso?quarter_key=eq.2026-Q1`, { headers: HEADERS }),
+  fetch(`${BASE}/rocks?quarter_key=eq.2026-Q1`, { headers: HEADERS }),
+  fetch(`${BASE}/scorecard_metrics?quarter_key=eq.2026-Q1&order=sort_order.asc`, { headers: HEADERS }),
+  fetch(`${BASE}/scorecard_results`, { headers: HEADERS }),
+  fetch(`${BASE}/leaderboard_entries?quarter_key=eq.2026-Q1`, { headers: HEADERS }),
+  fetch(`${BASE}/fame_wall?quarter_key=eq.2026-Q1`, { headers: HEADERS }),
+  fetch(`${BASE}/ram_sections?order=sort_order.asc`, { headers: HEADERS }),
+  fetch(`${BASE}/ram_metrics?order=sort_order.asc`, { headers: HEADERS }),
+  fetch(`${BASE}/ram_data?year=eq.2026`, { headers: HEADERS })
+].map(p => p.then(r => r.json())));
+</code></pre>
+</section>
+
+<hr class="divider">
+
+<section id="ex-update-revenue">
+<h2>Example: Update Monthly Revenue</h2>
+<span class="section-tag eos-tag">EOS Dashboard</span>
+<pre><code><span class="kw">await</span> fetch(
+  <span class="str">'https://zdxdvljrhtpmkuxwlwrm.supabase.co/rest/v1/pulso?quarter_key=eq.2026-Q1'</span>,
+  {
+    method: <span class="str">'PATCH'</span>,
+    headers: {
+      <span class="str">'apikey'</span>: <span class="str">'eyJhbGci...'</span>,
+      <span class="str">'Authorization'</span>: <span class="str">'Bearer eyJhbGci...'</span>,
+      <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>,
+      <span class="str">'Prefer'</span>: <span class="str">'return=representation'</span>
+    },
+    body: JSON.stringify({ <span class="key">revenue_current</span>: <span class="num">87500</span> })
+  }
+);</code></pre>
+</section>
+
+<hr class="divider">
+
+<section id="ex-update-ram">
+<h2>Example: Update RAM Week 3 (Upsert)</h2>
+<span class="section-tag ceo-tag">CEO Dashboard</span>
+<pre><code><span class="cmt">// Safe upsert — creates row if it doesn't exist, updates if it does</span>
+<span class="kw">await</span> fetch(
+  <span class="str">'https://zdxdvljrhtpmkuxwlwrm.supabase.co/rest/v1/ram_data'</span>,
+  {
+    method: <span class="str">'POST'</span>,
+    headers: {
+      <span class="str">'apikey'</span>: <span class="str">'eyJhbGci...'</span>,
+      <span class="str">'Authorization'</span>: <span class="str">'Bearer eyJhbGci...'</span>,
+      <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>,
+      <span class="str">'Prefer'</span>: <span class="str">'resolution=merge-duplicates,return=representation'</span>
+    },
+    body: JSON.stringify({
+      <span class="key">id</span>: <span class="str">'net_revenue_growth_2026_1'</span>,  <span class="cmt">// Feb 2026</span>
+      <span class="key">metric_id</span>: <span class="str">'net_revenue_growth'</span>,
+      <span class="key">year</span>: <span class="num">2026</span>,
+      <span class="key">month</span>: <span class="num">1</span>,                          <span class="cmt">// February</span>
+      <span class="key">week3</span>: <span class="num">8200</span>,
+      <span class="key">monthly_target</span>: <span class="num">45000</span>,
+      <span class="key">status</span>: <span class="str">'yellow'</span>,
+      <span class="key">metric_owner</span>: <span class="str">'Tomas'</span>,
+      <span class="key">note_week3_4</span>: <span class="str">'Push 2 more closings — coordinate next week'</span>
+    })
+  }
+);</code></pre>
+</section>
+
+<hr class="divider">
+
+<section id="ex-add-rock">
+<h2>Example: Add a New Rock</h2>
+<span class="section-tag eos-tag">EOS Dashboard</span>
+<pre><code><span class="kw">await</span> fetch(
+  <span class="str">'https://zdxdvljrhtpmkuxwlwrm.supabase.co/rest/v1/rocks'</span>,
+  {
+    method: <span class="str">'POST'</span>,
+    headers: { <span class="cmt">/* ... */</span> },
+    body: JSON.stringify({
+      <span class="key">id</span>: <span class="str">'rock-q2-retention'</span>,
+      <span class="key">quarter_key</span>: <span class="str">'2026-Q2'</span>,
+      <span class="key">name</span>: <span class="str">'Reduce churn to &lt;2% by end of Q2'</span>,
+      <span class="key">owner_id</span>: <span class="str">'nicolas'</span>,
+      <span class="key">status</span>: <span class="str">'on-track'</span>,
+      <span class="key">progress</span>: <span class="num">0</span>,
+      <span class="key">deadline</span>: <span class="str">'2026-06-30'</span>,
+      <span class="key">milestones</span>: [
+        { <span class="key">text</span>: <span class="str">'Audit all at-risk accounts'</span>, <span class="key">done</span>: <span class="kw">false</span> },
+        { <span class="key">text</span>: <span class="str">'Implement 60-day check-in protocol'</span>, <span class="key">done</span>: <span class="kw">false</span> },
+        { <span class="key">text</span>: <span class="str">'Launch client success scorecard'</span>, <span class="key">done</span>: <span class="kw">false</span> }
+      ]
+    })
+  }
+);</code></pre>
+</section>
+
+<hr class="divider">
+
+<section id="ex-ai-agent">
+<h2>AI Agent Pattern</h2>
+<span class="section-tag both-tag">Both Dashboards</span>
+<p>This is the recommended pattern for an AI agent that monitors and updates the dashboard automatically:</p>
+<pre><code><span class="cmt">// 1. READ current state</span>
+<span class="kw">const</span> rocks = <span class="kw">await</span> get(<span class="str">'/rocks?quarter_key=eq.2026-Q1'</span>);
+<span class="kw">const</span> offTrack = rocks.filter(r => r.status === <span class="str">'off-track'</span>);
+
+<span class="cmt">// 2. ANALYZE and decide action</span>
+<span class="kw">if</span> (offTrack.length > <span class="num">1</span>) {
+    <span class="cmt">// 3. WRITE — update scorecard result</span>
+    <span class="kw">await</span> upsert(<span class="str">'/scorecard_results'</span>, {
+        id: <span class="str">`sr-rocks-on-track-${currentWeek}`</span>,
+        metric_id: <span class="str">'rocks_on_track_metric_id'</span>,
+        week: currentWeek,
+        result: `${rocks.length - offTrack.length}/${rocks.length}`,
+        good: offTrack.length === <span class="num">0</span>
+    });
+
+    <span class="cmt">// 4. WRITE — add a note to the RAM</span>
+    <span class="kw">await</span> upsert(<span class="str">'/ram_data'</span>, {
+        id: <span class="str">`clients_lost_2026_2`</span>,
+        metric_id: <span class="str">'clients_lost'</span>,
+        year: <span class="num">2026</span>, month: <span class="num">2</span>,
+        note_week3_4: <span class="str">'2 rocks off track — priority review needed'</span>
+    });
+}</code></pre>
+
+<div class="intro-box" style="margin-top:20px;">
+    <p><strong>💡 Tip for AI agents:</strong> Always use <code>POST</code> with <code>Prefer: resolution=merge-duplicates</code> (upsert) rather than PATCH, unless you are certain the row exists. Upsert is idempotent and safe to call multiple times.</p>
+</div>
+
+<div style="height:60px;"></div>
+</section>
+
+</div>
+</div>
+
+<script>
+// Highlight active sidebar link based on scroll
+const links = document.querySelectorAll('.sidebar a');
+const sections = document.querySelectorAll('section[id]');
+window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => { if (window.scrollY >= s.offsetTop - 80) current = s.id; });
+    links.forEach(l => {
+        l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+    });
+}, { passive: true });
+</script>
+</body>
+</html>
